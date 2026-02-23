@@ -334,36 +334,10 @@ export const MockDB = {
     return true;
   },
 
-    if (balanceError) {
-      console.error('Balance error:', balanceError);
-      return false;
-    }
-
-    // 3. Create request
-    const { error: insertError } = await supabase
-      .from('withdrawals')
-      .insert({
-        user_id: user.id,
-        amount,
-        screenshot_url: screenshotUrl,
-        skin_name: skinName,
-        status: 'pending'
-      });
-
-    if (insertError) {
-      // Refund if insert fails
-      await supabase.from('profiles').update({ balance: current }).eq('id', user.id);
-      console.error('Insert error:', insertError);
-      return false;
-    }
-
-    return true;
-  },
-
   // Admin: Get All Requests
   getRequests: async (): Promise<WithdrawalRequest[]> => {
     const { data, error } = await supabase
-      .from('withdrawals')
+      .from('withdrawal_requests')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -376,7 +350,7 @@ export const MockDB = {
       id: item.id,
       userId: item.user_id,
       amount: item.amount,
-      screenshotUri: item.screenshot_url,
+      screenshotUri: item.screenshot_uri,
       status: item.status,
       createdAt: new Date(item.created_at).getTime(),
       skinName: item.skin_name
@@ -386,7 +360,7 @@ export const MockDB = {
   // Admin: Approve Request
   approveRequest: async (id: string): Promise<void> => {
     await supabase
-      .from('withdrawals')
+      .from('withdrawal_requests')
       .update({ status: 'approved' })
       .eq('id', id);
   },
@@ -395,8 +369,26 @@ export const MockDB = {
   rejectRequest: async (id: string): Promise<void> => {
     // Get request details
     const { data: request } = await supabase
-      .from('withdrawals')
+      .from('withdrawal_requests')
       .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!request) return;
+
+    // Refund
+    const { data: user } = await supabase.from('profiles').select('balance').eq('id', request.user_id).single();
+    if (user) {
+        await supabase.from('profiles').update({ balance: user.balance + request.amount }).eq('id', request.user_id);
+    }
+
+    // Update status
+    await supabase
+      .from('withdrawal_requests')
+      .update({ status: 'rejected' })
+      .eq('id', id);
+  }
+};
       .eq('id', id)
       .single();
 
