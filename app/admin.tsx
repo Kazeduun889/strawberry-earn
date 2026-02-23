@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { MockDB, WithdrawalRequest } from '../services/mockDb';
+import { MockDB } from '../services/mockDb';
+import { WithdrawalRequest } from '../services/types';
 
 export default function AdminScreen() {
   const router = useRouter();

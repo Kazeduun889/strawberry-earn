@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, FlatList } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { MockDB, Review } from '../services/mockDb';
+import { MockDB } from '../services/mockDb';
+import { Review } from '../services/types';
 
 export default function ReviewsScreen() {
   const router = useRouter();
