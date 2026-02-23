@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { MockDB, SupportMessage } from '../../services/mockDb';
+import { MockDB } from '../../services/mockDb';
+import { SupportMessage } from '../../services/types';
 
 export default function AdminChatScreen() {
   const router = useRouter();

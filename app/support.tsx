@@ -2,7 +2,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert,
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { MockDB, SupportMessage } from '../services/mockDb';
+import { MockDB } from '../services/mockDb';
+import { SupportMessage } from '../services/types';
 
 export default function SupportScreen() {
   const router = useRouter();

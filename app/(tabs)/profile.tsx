@@ -43,8 +43,9 @@ export default function ProfileScreen() {
         <Text style={styles.menuText}>История выплат</Text>
       </TouchableOpacity>
       
-      <TouchableOpacity style={styles.menuItem}>
-        <Text style={styles.menuText}>Поддержка</Text>
+      {/* Support Button */}
+      <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/support')}>
+        <Text style={styles.menuText}>💬 Поддержка</Text>
       </TouchableOpacity>
 
       {/* Show Admin Panel only for specific ID */}
