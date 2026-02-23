@@ -353,70 +353,94 @@ exrt const MUe:oot= if (!user) return 0;
 
   // Admin: Get All Requests
   getRequests: async (): Promise<WithdrawalRequest[]> => {
-    const { data, error } = await supabase
-      .from('withdrawal_requests')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('withdrawal_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Fetch error:', error);
+      if (error) {
+        console.error('Fetch error:', error);
+        return [];
+      }
+
+      return (data || []).map(item => ({
+        id: item.id,
+        userId: item.user_id,
+        amount: item.amount,
+        screenshotUri: item.screenshot_uri,
+        status: item.status,
+        createdAt: new Date(item.created_at).getTime(),
+        skinName: item.skin_name
+      }));
+    } catch (e) {
+      console.error('getRequests error:', e);
       return [];
     }
-
-    return data.map(item => ({
-      id: item.id,
-      userId: item.user_id,
-      amount: item.amount,
-      screenshotUri: item.screenshot_uri,
-      status: item.status,
-      createdAt: new Date(item.created_at).getTime(),
-      skinName: item.skin_name
-    }));
   },
 
   // Admin: Approve Request
   approveRequest: async (id: string): Promise<void> => {
-    await supabase
-      .from('withdrawal_requests')
-      .update({ status: 'approved' })
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('withdrawal_requests')
+        .update({ status: 'approved' })
+        .eq('id', id);
+      
+      if (error) console.error('Error approving request:', error);
+    } catch (e) {
+      console.error('approveRequest error:', e);
+    }
   },
 
   // Admin: Reject Request (Refund balance)
   rejectRequest: async (id: string): Promise<void> => {
-    // Get request details
-    const { data: request } = await supabase
-      .from('withdrawal_requests')
-      .select('*')
-      .eq('id', id)
-      .single();
+    try {
+      // Get request details
+      const { data: request, error: reqError } = await supabase
+        .from('withdrawal_requests')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-    if (!request) return;
+      if (reqError || !request) {
+        console.error('Error fetching request for rejection:', reqError);
+        return;
+      }
 
-    // Refund
-    const { data: user } = await supabase.from('profiles').select('balance').eq('id', request.user_id).single();
-    if (user) {
+      // Get user profile
+      const { data: user, error: userError } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', request.user_id)
+        .single();
+
+      if (userError || !user) {
+        console.error('Error fetching user for refund:', userError);
+        return;
+      }
+
+      // Refund balance
+      const { error: refundError } = await supabase
+        .from('profiles')
+        .update({ balance: user.balance + request.amount })
+        .eq('id', request.user_id);
+
+      if (refundError) {
+        console.error('Error refunding balance:', refundError);
+        return;
+      }
+
+      // Update status
+      const { error: statusError } = await supabase
+        .from('withdrawal_requests')
+        .update({ status: 'rejected' })
+        .eq('id', id);
+        
+      if (statusError) console.error('Error updating status to rejected:', statusError);
+      
+    } catch (e) {
+      console.error('rejectRequest error:', e);
     }
-
-    // Update status
-    await supabase
-      .from('withdrawal_requests')
-      .update({ status: 'rejected' })
-      .eq('id', id);
-      await supabase.from('profiles').update({ balance: user.balance + request.amount }).eq('id', request.user_id);
-};    }
-
-    // Update status
-    await supabase
-      .from('withdrawal_requests')
-      .update({ status: 'rejected' })
-      .eq('id', id);
-  }
-};
-    // Update status
-    await supabase
-      .from('withdrawal_requests')
-      .update({ status: 'rejected' })
-      .eq('id', id);
   }
 };
