@@ -1,36 +1,66 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { MockDB } from '../../services/mockDb';
 
 export default function ProfileScreen() {
+  const router = useRouter();
+  const [balance, setBalance] = useState(0);
+
+  useEffect(() => {
+    // Refresh balance on focus would be better, but simple load for now
+    MockDB.getBalance().then(setBalance);
+  }, []);
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.avatarPlaceholder} />
-        <Text style={styles.name}>Пользователь #1234</Text>
-        <Text style={styles.email}>user@example.com</Text>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>U</Text>
+        </View>
+        <Text style={styles.username}>User_123</Text>
+        <Text style={styles.userId}>ID: 12345678</Text>
       </View>
 
-      <View style={styles.stats}>
+      <View style={styles.statsCard}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>150</Text>
-          <Text style={styles.statLabel}>Заданий</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>5000 🍓</Text>
+          <Text style={styles.statValue}>{balance.toFixed(2)} G</Text>
           <Text style={styles.statLabel}>Заработано</Text>
         </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>0</Text>
+          <Text style={styles.statLabel}>Заданий</Text>
+        </View>
       </View>
-    </View>
+
+      <TouchableOpacity style={styles.menuItem}>
+        <Text style={styles.menuText}>История выплат</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity style={styles.menuItem}>
+        <Text style={styles.menuText}>Поддержка</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.menuItem, styles.adminButton]} onPress={() => router.push('/admin')}>
+        <Text style={[styles.menuText, styles.adminText]}>Админ Панель (Demo)</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5', padding: 20 },
-  header: { alignItems: 'center', marginBottom: 30, marginTop: 20 },
-  avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#ddd', marginBottom: 15 },
-  name: { fontSize: 20, fontWeight: 'bold' },
-  email: { color: '#666' },
-  stats: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: 'white', padding: 20, borderRadius: 15 },
-  statItem: { alignItems: 'center' },
-  statValue: { fontSize: 20, fontWeight: 'bold', color: '#007AFF' },
-  statLabel: { color: '#666' },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  header: { backgroundColor: 'white', padding: 30, alignItems: 'center', marginBottom: 10 },
+  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#87CEEB', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  avatarText: { fontSize: 32, color: 'white', fontWeight: 'bold' },
+  username: { fontSize: 20, fontWeight: 'bold' },
+  userId: { color: '#666', marginTop: 5 },
+  statsCard: { backgroundColor: 'white', flexDirection: 'row', padding: 20, marginBottom: 10 },
+  statItem: { flex: 1, alignItems: 'center' },
+  statValue: { fontSize: 18, fontWeight: 'bold', color: '#007AFF' },
+  statLabel: { color: '#666', marginTop: 5 },
+  menuItem: { backgroundColor: 'white', padding: 20, marginBottom: 1, flexDirection: 'row', alignItems: 'center' },
+  menuText: { fontSize: 16 },
+  adminButton: { marginTop: 20, backgroundColor: '#f0f0f0' },
+  adminText: { color: 'red', fontWeight: 'bold' },
 });
