@@ -68,10 +68,15 @@ export const MockDB = {
       }
       
       // Update profile
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ has_subscribed: true })
         .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Error updating subscription status:', updateError);
+        return false;
+      }
     }
 
     // Add balance
