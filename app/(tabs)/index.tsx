@@ -16,7 +16,7 @@ export default function EarnScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <Text style={styles.balanceTitle}>Ваш баланс</Text>
         <Text style={styles.balanceValue}>{points} 🍓</Text>
@@ -41,7 +41,8 @@ export default function EarnScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5', padding: 20 },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  contentContainer: { padding: 20 },
   header: { backgroundColor: '#007AFF', padding: 20, borderRadius: 15, marginBottom: 20, alignItems: 'center' },
   balanceTitle: { color: 'white', fontSize: 16 },
   balanceValue: { color: 'white', fontSize: 32, fontWeight: 'bold' },
