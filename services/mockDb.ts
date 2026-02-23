@@ -1,6 +1,15 @@
 import { supabase } from './supabase';
 import { Alert } from 'react-native';
 
+export interface SupportMessage {
+  id: string;
+  user_id: string;
+  is_admin_reply: boolean;
+  content: string;
+  image_url?: string;
+  created_at: number;
+}
+
 export interface Review {
   id: string;
   username: string;
