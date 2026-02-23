@@ -25,7 +25,7 @@ export default function EarnScreen() {
       <Text style={styles.sectionTitle}>Доступные задания</Text>
 
       {/* Replace with your actual Block ID from Adsgram */}
-      <AdsgramTask blockId="INT_PO_5678" onReward={handleAdReward} />
+      <AdsgramTask blockId="23585" onReward={handleAdReward} />
 
       <TouchableOpacity style={styles.taskCard} onPress={() => handleTask(50)}>
         <Text style={styles.taskTitle}>Пройти опрос "Любимые ягоды"</Text>
