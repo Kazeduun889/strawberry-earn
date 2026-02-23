@@ -10,10 +10,18 @@ export default function EarnScreen() {
   const [isCheckingSub, setIsCheckingSub] = useState(false);
   const [hasClickedSub, setHasClickedSub] = useState(false);
 
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
   useEffect(() => {
     // Load initial balance
     MockDB.getBalance().then(setPoints);
+    checkSubscriptionStatus();
   }, []);
+
+  const checkSubscriptionStatus = async () => {
+    const subscribed = await MockDB.checkTaskStatus('subscribe_channel');
+    setIsSubscribed(subscribed);
+  };
 
   const handleAdReward = async () => {
     // Random reward between 0.4 and 0.8
@@ -39,8 +47,6 @@ export default function EarnScreen() {
     
     // Simulate smart verification (delay)
     setTimeout(async () => {
-      // Check if already rewarded (optional, better with DB check)
-      // For now we just award
       const reward = 50.00;
       const success = await MockDB.completeTask('subscribe_channel', reward);
       
@@ -50,9 +56,16 @@ export default function EarnScreen() {
         const newBal = await MockDB.getBalance();
         setPoints(newBal);
         Alert.alert('Успех', `Подписка подтверждена! +${reward} G`);
-        setHasClickedSub(false); // Reset
+        setIsSubscribed(true); // Mark as subscribed
       } else {
-        Alert.alert('Инфо', 'Вы уже получили награду за это задание');
+        // Double check if it was already done
+        const isDone = await MockDB.checkTaskStatus('subscribe_channel');
+        if (isDone) {
+           setIsSubscribed(true);
+           Alert.alert('Инфо', 'Вы уже получили награду за это задание');
+        } else {
+           Alert.alert('Ошибка', 'Не удалось проверить подписку. Попробуйте еще раз.');
+        }
       }
     }, 3000); // 3 seconds delay for "verification"
   };
@@ -70,30 +83,32 @@ export default function EarnScreen() {
       <AdsgramTask blockId="23585" onReward={handleAdReward} />
 
       {/* Subscription Task with Smart Verification */}
-      <View style={styles.taskCard}>
-        <View style={{flex: 1}}>
-          <Text style={styles.taskTitle}>Подписаться на канал</Text>
-          <Text style={styles.taskReward}>+50.00 G</Text>
+      {!isSubscribed && (
+        <View style={styles.taskCard}>
+          <View style={{flex: 1}}>
+            <Text style={styles.taskTitle}>Подписаться на канал</Text>
+            <Text style={styles.taskReward}>+50.00 G</Text>
+          </View>
+          
+          {!hasClickedSub ? (
+            <TouchableOpacity style={styles.actionButton} onPress={handleSubscribe}>
+              <Text style={styles.actionButtonText}>Подписаться</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.checkButton]} 
+              onPress={handleCheckSubscription}
+              disabled={isCheckingSub}
+            >
+              {isCheckingSub ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text style={styles.actionButtonText}>Проверить</Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
-        
-        {!hasClickedSub ? (
-          <TouchableOpacity style={styles.actionButton} onPress={handleSubscribe}>
-            <Text style={styles.actionButtonText}>Подписаться</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.checkButton]} 
-            onPress={handleCheckSubscription}
-            disabled={isCheckingSub}
-          >
-            {isCheckingSub ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              <Text style={styles.actionButtonText}>Проверить</Text>
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
+      )}
 
       {/* Reviews Button */}
       <TouchableOpacity style={styles.reviewsButton} onPress={() => router.push('/reviews')}>

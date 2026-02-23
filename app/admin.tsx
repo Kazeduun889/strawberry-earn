@@ -112,6 +112,8 @@ const styles = StyleSheet.create({
   refreshButton: { backgroundColor: '#007AFF', padding: 10, borderRadius: 8, alignItems: 'center', marginBottom: 20 },
   refreshText: { color: 'white', fontWeight: 'bold' },
   emptyText: { textAlign: 'center', marginTop: 50, color: '#999' },
+  supportButton: { backgroundColor: '#5856D6', padding: 15, borderRadius: 10, marginBottom: 20, alignItems: 'center' },
+  supportButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
   card: { backgroundColor: 'white', padding: 15, borderRadius: 10, marginBottom: 15, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, elevation: 3 },
   cardDone: { opacity: 0.7, backgroundColor: '#f9f9f9' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },

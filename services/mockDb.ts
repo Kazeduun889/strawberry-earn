@@ -138,6 +138,125 @@ export const MockDB = {
     return true;
   },
 
+  // Support: Get My Messages
+  getSupportMessages: async (): Promise<SupportMessage[]> => {
+    const user = await ensureUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('support_messages')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.log('Error fetching support:', error.message);
+      return [];
+    }
+    return data.map(item => ({ ...item, created_at: new Date(item.created_at).getTime() }));
+  },
+
+  // Support: Send Message (User)
+  sendSupportMessage: async (content: string, imageUri?: string): Promise<boolean> => {
+    const user = await ensureUser();
+    if (!user) return false;
+
+    let imageUrl = null;
+
+    if (imageUri) {
+       const fileName = `support/${user.id}/${Date.now()}.jpg`;
+       const formData = new FormData();
+       formData.append('file', {
+         uri: imageUri,
+         name: fileName,
+         type: 'image/jpeg',
+       } as any);
+
+       const { error: uploadError } = await supabase.storage
+         .from('screenshots') // Using same bucket for simplicity
+         .upload(fileName, formData);
+       
+       if (!uploadError) {
+         imageUrl = supabase.storage.from('screenshots').getPublicUrl(fileName).data.publicUrl;
+       }
+    }
+
+    const { error } = await supabase
+      .from('support_messages')
+      .insert({
+        user_id: user.id,
+        content,
+        image_url: imageUrl,
+        is_admin_reply: false
+      });
+
+    return !error;
+  },
+
+  // Admin Support: Get All Conversations (Grouped by User)
+  getSupportUsers: async (): Promise<{userId: string, lastMessage: string, lastDate: number}[]> => {
+    // This is complex in simple SQL. We'll fetch all and group in JS for this mock.
+    const { data, error } = await supabase
+      .from('support_messages')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) return [];
+
+    const usersMap = new Map();
+    data.forEach(msg => {
+      if (!usersMap.has(msg.user_id)) {
+        usersMap.set(msg.user_id, {
+          userId: msg.user_id,
+          lastMessage: msg.content,
+          lastDate: new Date(msg.created_at).getTime()
+        });
+      }
+    });
+
+    return Array.from(usersMap.values());
+  },
+
+  // Admin Support: Get User Messages
+  getAdminUserMessages: async (userId: string): Promise<SupportMessage[]> => {
+    const { data, error } = await supabase
+      .from('support_messages')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    if (error) return [];
+    return data.map(item => ({ ...item, created_at: new Date(item.created_at).getTime() }));
+  },
+
+  // Admin Support: Reply
+  sendAdminReply: async (userId: string, content: string): Promise<boolean> => {
+    const { error } = await supabase
+      .from('support_messages')
+      .insert({
+        user_id: userId,
+        content,
+        is_admin_reply: true
+      });
+    return !error;
+  },
+
+  // Check Task Status
+  checkTaskStatus: async (taskId: string): Promise<boolean> => {
+    const user = await ensureUser();
+    if (!user) return false;
+
+    if (taskId === 'subscribe_channel') {
+      const { data } = await supabase
+        .from('profiles')
+        .select('has_subscribed')
+        .eq('id', user.id)
+        .single();
+      return !!data?.has_subscribed;
+    }
+    return false;
+  },
+
   // User: Add Balance (Ad reward)
   addBalance: async (amount: number): Promise<number> => {
     const user = await ensureUser();
