@@ -1,4 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from './supabase';
+import { Alert } from 'react-native';
 
 export interface WithdrawalRequest {
   id: string;
@@ -10,81 +11,198 @@ export interface WithdrawalRequest {
   skinName?: string;
 }
 
-const STORAGE_KEY_BALANCE = 'user_balance';
-const STORAGE_KEY_REQUESTS = 'admin_requests';
+// Helper to ensure user is logged in
+const ensureUser = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) return session.user;
 
-// Mock delay to simulate network
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  // If no session, try anonymous sign in
+  const { data, error } = await supabase.auth.signInAnonymously();
+  
+  if (error) {
+    // If anonymous sign in fails (maybe disabled), try random email signup
+    const email = `user_${Math.random().toString(36).substring(7)}@temp.com`;
+    const password = 'password123';
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    if (signUpError) {
+      console.error('Auth error:', signUpError);
+      return null;
+    }
+    return signUpData.user;
+  }
+  
+  return data.user;
+};
 
 export const MockDB = {
   // User: Get Balance
   getBalance: async (): Promise<number> => {
-    const bal = await AsyncStorage.getItem(STORAGE_KEY_BALANCE);
-    return bal ? parseFloat(bal) : 0;
+    const user = await ensureUser();
+    if (!user) return 0;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('balance')
+      .eq('id', user.id)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
+      // Profile doesn't exist, create it
+      await supabase.from('profiles').insert({ id: user.id, balance: 0 });
+      return 0;
+    }
+
+    return data?.balance || 0;
   },
 
   // User: Add Balance (Ad reward)
   addBalance: async (amount: number): Promise<number> => {
+    const user = await ensureUser();
+    if (!user) return 0;
+
+    // Get current balance
     const current = await MockDB.getBalance();
     const newBal = current + amount;
-    await AsyncStorage.setItem(STORAGE_KEY_BALANCE, newBal.toString());
+
+    // Update balance
+    const { error } = await supabase
+      .from('profiles')
+      .update({ balance: newBal })
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('Error adding balance:', error);
+      return current;
+    }
     return newBal;
   },
 
   // User: Create Withdrawal Request
   createWithdrawal: async (amount: number, screenshotUri: string, skinName: string): Promise<boolean> => {
-    await delay(1000);
+    const user = await ensureUser();
+    if (!user) return false;
+
     const current = await MockDB.getBalance();
     if (current < amount) return false;
 
-    // Deduct balance immediately (or hold it)
-    await AsyncStorage.setItem(STORAGE_KEY_BALANCE, (current - amount).toString());
+    // 1. Upload screenshot
+    const fileName = `${user.id}/${Date.now()}.jpg`;
+    const formData = new FormData();
+    formData.append('file', {
+      uri: screenshotUri,
+      name: fileName,
+      type: 'image/jpeg',
+    } as any);
 
-    const requestsJson = await AsyncStorage.getItem(STORAGE_KEY_REQUESTS);
-    const requests: WithdrawalRequest[] = requestsJson ? JSON.parse(requestsJson) : [];
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('screenshots')
+      .upload(fileName, formData, {
+        contentType: 'image/jpeg',
+      });
 
-    const newRequest: WithdrawalRequest = {
-      id: Math.random().toString(36).substr(2, 9),
-      userId: 'user_1', // Mock user ID
-      amount,
-      screenshotUri,
-      status: 'pending',
-      createdAt: Date.now(),
-      skinName
-    };
+    if (uploadError) {
+      Alert.alert('Ошибка загрузки', 'Проверьте, создан ли бакет "screenshots" (public) в Supabase');
+      console.error('Upload error:', uploadError);
+      return false;
+    }
 
-    requests.push(newRequest);
-    await AsyncStorage.setItem(STORAGE_KEY_REQUESTS, JSON.stringify(requests));
+    const screenshotUrl = supabase.storage.from('screenshots').getPublicUrl(fileName).data.publicUrl;
+
+    // 2. Deduct balance
+    const { error: balanceError } = await supabase
+      .from('profiles')
+      .update({ balance: current - amount })
+      .eq('id', user.id);
+
+    if (balanceError) {
+      console.error('Balance error:', balanceError);
+      return false;
+    }
+
+    // 3. Create request
+    const { error: insertError } = await supabase
+      .from('withdrawals')
+      .insert({
+        user_id: user.id,
+        amount,
+        screenshot_url: screenshotUrl,
+        skin_name: skinName,
+        status: 'pending'
+      });
+
+    if (insertError) {
+      // Refund if insert fails
+      await supabase.from('profiles').update({ balance: current }).eq('id', user.id);
+      console.error('Insert error:', insertError);
+      return false;
+    }
+
     return true;
   },
 
   // Admin: Get All Requests
   getRequests: async (): Promise<WithdrawalRequest[]> => {
-    const requestsJson = await AsyncStorage.getItem(STORAGE_KEY_REQUESTS);
-    return requestsJson ? JSON.parse(requestsJson) : [];
+    const { data, error } = await supabase
+      .from('withdrawals')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Fetch error:', error);
+      return [];
+    }
+
+    return data.map(item => ({
+      id: item.id,
+      userId: item.user_id,
+      amount: item.amount,
+      screenshotUri: item.screenshot_url,
+      status: item.status,
+      createdAt: new Date(item.created_at).getTime(),
+      skinName: item.skin_name
+    }));
   },
 
   // Admin: Approve Request
   approveRequest: async (id: string): Promise<void> => {
-    await delay(500);
-    const requests = await MockDB.getRequests();
-    const updated = requests.map(r => r.id === id ? { ...r, status: 'approved' as const } : r);
-    await AsyncStorage.setItem(STORAGE_KEY_REQUESTS, JSON.stringify(updated));
+    await supabase
+      .from('withdrawals')
+      .update({ status: 'approved' })
+      .eq('id', id);
   },
 
   // Admin: Reject Request (Refund balance)
   rejectRequest: async (id: string): Promise<void> => {
-    await delay(500);
-    const requests = await MockDB.getRequests();
-    const request = requests.find(r => r.id === id);
-    
-    if (request && request.status === 'pending') {
-      // Refund
-      const current = await MockDB.getBalance();
-      await AsyncStorage.setItem(STORAGE_KEY_BALANCE, (current + request.amount).toString());
-    }
+    // Get request details
+    const { data: request } = await supabase
+      .from('withdrawals')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    const updated = requests.map(r => r.id === id ? { ...r, status: 'rejected' as const } : r);
-    await AsyncStorage.setItem(STORAGE_KEY_REQUESTS, JSON.stringify(updated));
+    if (!request || request.status !== 'pending') return;
+
+    // Update status
+    await supabase
+      .from('withdrawals')
+      .update({ status: 'rejected' })
+      .eq('id', id);
+
+    // Refund user
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('balance')
+      .eq('id', request.user_id)
+      .single();
+
+    if (profile) {
+      await supabase
+        .from('profiles')
+        .update({ balance: profile.balance + request.amount })
+        .eq('id', request.user_id);
+    }
   }
 };

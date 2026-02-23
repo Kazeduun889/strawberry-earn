@@ -67,10 +67,3 @@ const styles = StyleSheet.create({
   taskTitle: { fontSize: 16, fontWeight: '500', flex: 1 },
   taskReward: { fontSize: 16, fontWeight: 'bold', color: '#007AFF' },
 });
-  balanceTitle: { color: 'white', fontSize: 16 },
-  balanceValue: { color: 'white', fontSize: 32, fontWeight: 'bold' },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  taskCard: { backgroundColor: 'white', padding: 20, borderRadius: 10, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, elevation: 3 },
-  taskTitle: { fontSize: 16, fontWeight: '500', flex: 1 },
-  taskReward: { fontSize: 16, fontWeight: 'bold', color: '#007AFF' },
-});
