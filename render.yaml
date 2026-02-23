@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: earning-app
+    env: static
+    buildCommand: npm install && npx expo export -p web
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: 20.0.0
