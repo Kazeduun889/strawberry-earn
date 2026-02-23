@@ -62,6 +62,10 @@ export default function AdminScreen() {
         <Text style={styles.refreshText}>Обновить список</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity onPress={() => router.push('/admin/support')} style={styles.supportButton}>
+        <Text style={styles.supportButtonText}>Чат поддержки</Text>
+      </TouchableOpacity>
+
       {requests.length === 0 ? (
         <Text style={styles.emptyText}>Нет заявок</Text>
       ) : (

@@ -119,25 +119,27 @@ export const MockDB = {
         }
         
         // Update profile
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .upsert({ id: user.id, has_subscribed: true })
-          .eq('id', user.id);
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .upsert({ id: user.id, has_subscribed: true })
+        .eq('id', user.id);
 
-        if (updateError) {
-          console.error('Error updating subscription status:', updateError);
-          return false;
-        }
+      if (updateError) {
+        console.error('Error updating subscription status:', updateError);
+        Alert.alert('Ошибка подписки', updateError.message);
+        return false;
       }
-
-      // Add balance
-      await MockDB.addBalance(reward);
-      return true;
-    } catch (e) {
-      console.error('completeTask exception:', e);
-      return false;
     }
-  },
+
+    // Add balance
+    await MockDB.addBalance(reward);
+    return true;
+  } catch (e) {
+    console.error('completeTask exception:', e);
+    Alert.alert('Ошибка задания', (e as Error).message);
+    return false;
+  }
+},
 
   // Check Task Status
   checkTaskStatus: async (taskId: string): Promise<boolean> => {
@@ -182,6 +184,7 @@ export const MockDB = {
       const user = await ensureUser();
       if (!user) {
         console.error('User not found in addReview');
+        Alert.alert('Ошибка', 'Не удалось авторизоваться. Проверьте интернет.');
         return false;
       }
 
@@ -195,15 +198,17 @@ export const MockDB = {
         });
 
       if (error) {
-        console.error('Error adding review:', error);
-        return false;
-      }
-      return true;
-    } catch (e) {
-      console.error('addReview exception:', e);
+      console.error('Error adding review:', error);
+      Alert.alert('Ошибка отзыва', error.message);
       return false;
     }
-  },
+    return true;
+  } catch (e) {
+    console.error('addReview exception:', e);
+    Alert.alert('Ошибка отзыва', (e as Error).message);
+    return false;
+  }
+},
 
   // Support: Get My Messages
   getSupportMessages: async (): Promise<SupportMessage[]> => {
@@ -240,25 +245,27 @@ export const MockDB = {
       }
 
       const { error } = await supabase
-        .from('support_messages')
-        .insert({
-          user_id: user.id,
-          content,
-          image_url: imageUrl,
-          is_admin_reply: false
-        });
+      .from('support_messages')
+      .insert({
+        user_id: user.id,
+        content,
+        image_url: imageUrl,
+        is_admin_reply: false
+      });
 
-      if (error) {
-        console.error('Send message error:', error);
-        return false;
-      }
-
-      return true;
-    } catch (e) {
-      console.error('sendSupportMessage exception:', e);
+    if (error) {
+      console.error('Send message error:', error);
+      Alert.alert('Ошибка поддержки', error.message);
       return false;
     }
-  },
+
+    return true;
+  } catch (e) {
+    console.error('sendSupportMessage exception:', e);
+    Alert.alert('Ошибка поддержки', (e as Error).message);
+    return false;
+  }
+},
 
   // Admin Support: Get All Conversations (Grouped by User)
   getSupportUsers: async (): Promise<{userId: string, lastMessage: string, lastDate: number}[]> => {
