@@ -48,7 +48,13 @@ export default function AdminScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.title}>Админ Панель</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Text style={styles.backButtonText}>← Назад</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>Админ Панель</Text>
+      </View>
+
       <TouchableOpacity onPress={loadRequests} style={styles.refreshButton}>
         <Text style={styles.refreshText}>Обновить список</Text>
       </TouchableOpacity>
@@ -97,9 +103,12 @@ export default function AdminScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   contentContainer: { padding: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
-  refreshButton: { alignSelf: 'flex-end', padding: 10, marginBottom: 10 },
-  refreshText: { color: '#007AFF' },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  backButton: { marginRight: 15, padding: 5 },
+  backButtonText: { fontSize: 18, color: '#007AFF' },
+  title: { fontSize: 24, fontWeight: 'bold' },
+  refreshButton: { backgroundColor: '#007AFF', padding: 10, borderRadius: 8, alignItems: 'center', marginBottom: 20 },
+  refreshText: { color: 'white', fontWeight: 'bold' },
   emptyText: { textAlign: 'center', marginTop: 50, color: '#999' },
   card: { backgroundColor: 'white', padding: 15, borderRadius: 10, marginBottom: 15, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, elevation: 3 },
   cardDone: { opacity: 0.7, backgroundColor: '#f9f9f9' },

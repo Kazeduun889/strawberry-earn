@@ -46,7 +46,7 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
       {children || (
         <>
           <Text style={styles.text}>Смотреть рекламу</Text>
-          <Text style={styles.reward}>+10 🍓</Text>
+          <Text style={styles.reward}>0.02 - 0.06 G</Text>
         </>
       )}
     </TouchableOpacity>
@@ -75,6 +75,6 @@ const styles = StyleSheet.create({
   reward: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF0000', // Strawberry color
+    color: '#007AFF', // Blue color
   },
 });

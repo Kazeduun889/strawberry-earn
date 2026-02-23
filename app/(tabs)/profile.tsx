@@ -6,10 +6,16 @@ import { MockDB } from '../../services/mockDb';
 export default function ProfileScreen() {
   const router = useRouter();
   const [balance, setBalance] = useState(0);
+  const [telegramId, setTelegramId] = useState<number | null>(null);
 
   useEffect(() => {
-    // Refresh balance on focus would be better, but simple load for now
+    // Refresh balance
     MockDB.getBalance().then(setBalance);
+
+    // Get Telegram User ID
+    if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+      setTelegramId((window as any).Telegram.WebApp.initDataUnsafe.user.id);
+    }
   }, []);
 
   return (
@@ -18,8 +24,8 @@ export default function ProfileScreen() {
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>U</Text>
         </View>
-        <Text style={styles.username}>User_123</Text>
-        <Text style={styles.userId}>ID: 12345678</Text>
+        <Text style={styles.username}>User</Text>
+        <Text style={styles.userId}>ID: {telegramId || 'Unknown'}</Text>
       </View>
 
       <View style={styles.statsCard}>
@@ -41,9 +47,12 @@ export default function ProfileScreen() {
         <Text style={styles.menuText}>Поддержка</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.menuItem, styles.adminButton]} onPress={() => router.push('/admin')}>
-        <Text style={[styles.menuText, styles.adminText]}>Админ Панель (Demo)</Text>
-      </TouchableOpacity>
+      {/* Show Admin Panel only for specific ID */}
+      {telegramId === 1562788488 && (
+        <TouchableOpacity style={[styles.menuItem, styles.adminButton]} onPress={() => router.push('/admin')}>
+          <Text style={[styles.menuText, styles.adminText]}>Админ Панель</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }

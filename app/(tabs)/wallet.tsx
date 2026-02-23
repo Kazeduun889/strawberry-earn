@@ -27,8 +27,8 @@ export default function WalletScreen() {
   };
 
   const handleWithdraw = async () => {
-    if (balance < 5000) {
-      Alert.alert('Ошибка', 'Минимальная сумма вывода: 5000 G');
+    if (balance < 1000) {
+      Alert.alert('Ошибка', 'Минимальная сумма вывода: 1000 G');
       return;
     }
     if (!screenshot) {
@@ -38,7 +38,8 @@ export default function WalletScreen() {
 
     setIsSubmitting(true);
     try {
-      const success = await MockDB.createWithdrawal(5000, screenshot, 'Project Evolution Skin');
+      // Withdraw full balance
+      const success = await MockDB.createWithdrawal(balance, screenshot, 'Project Evolution Skin');
       if (success) {
         Alert.alert('Успех', 'Заявка отправлена на проверку!');
         setScreenshot(null);
@@ -63,8 +64,8 @@ export default function WalletScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Вывод средств</Text>
         <Text style={styles.instruction}>
-          1. Накопите 5000 G.{'\n'}
-          2. Выставьте скин в Project Evolution за 5000 G.{'\n'}
+          1. Накопите минимум 1000 G.{'\n'}
+          2. Выставьте скин в Project Evolution за {balance >= 1000 ? balance.toFixed(2) : 'XXXX.XX'} G.{'\n'}
           3. Загрузите скриншот выставленного скина.
         </Text>
 
@@ -79,12 +80,12 @@ export default function WalletScreen() {
         )}
 
         <TouchableOpacity 
-          style={[styles.withdrawButton, (balance < 5000 || isSubmitting) && styles.disabledButton]} 
+          style={[styles.withdrawButton, (balance < 1000 || isSubmitting) && styles.disabledButton]} 
           onPress={handleWithdraw}
-          disabled={balance < 5000 || isSubmitting}
+          disabled={balance < 1000 || isSubmitting}
         >
           <Text style={styles.withdrawButtonText}>
-            {isSubmitting ? 'Отправка...' : 'Вывести 5000 G'}
+            {isSubmitting ? 'Отправка...' : `Вывести ${balance.toFixed(2)} G`}
           </Text>
         </TouchableOpacity>
       </View>
