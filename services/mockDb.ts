@@ -1,6 +1,14 @@
 import { supabase } from './supabase';
 import { Alert } from 'react-native';
 
+export interface Review {
+  id: string;
+  username: string;
+  content: string;
+  rating: number;
+  created_at: number;
+}
+
 export interface WithdrawalRequest {
   id: string;
   userId: string;
@@ -57,6 +65,77 @@ export const MockDB = {
     }
 
     return data?.balance || 0;
+  },
+
+  // Task Completion (Prevent duplicates)
+  completeTask: async (taskId: string, reward: number): Promise<boolean> => {
+    const user = await ensureUser();
+    if (!user) return false;
+
+    // Check if task is already completed
+    if (taskId === 'subscribe_channel') {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('has_subscribed')
+        .eq('id', user.id)
+        .single();
+        
+      if (data?.has_subscribed) {
+        return false; // Already done
+      }
+      
+      // Update profile
+      await supabase
+        .from('profiles')
+        .update({ has_subscribed: true })
+        .eq('id', user.id);
+    }
+
+    // Add balance
+    await MockDB.addBalance(reward);
+    return true;
+  },
+
+  // Reviews: Get All
+  getReviews: async (): Promise<Review[]> => {
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.log('Error fetching reviews:', error.message);
+      return [];
+    }
+
+    return data.map(item => ({
+      id: item.id,
+      username: item.username || 'Аноним',
+      content: item.content,
+      rating: item.rating,
+      created_at: new Date(item.created_at).getTime(),
+    }));
+  },
+
+  // Reviews: Add
+  addReview: async (content: string, rating: number): Promise<boolean> => {
+    const user = await ensureUser();
+    if (!user) return false;
+
+    const { error } = await supabase
+      .from('reviews')
+      .insert({
+        user_id: user.id,
+        username: user.email?.split('@')[0] || 'User',
+        content,
+        rating
+      });
+
+    if (error) {
+      console.error('Error adding review:', error);
+      return false;
+    }
+    return true;
   },
 
   // User: Add Balance (Ad reward)
