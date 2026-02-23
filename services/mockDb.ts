@@ -29,6 +29,7 @@ const ensureUser = async () => {
     });
     if (signUpError) {
       console.error('Auth error:', signUpError);
+      Alert.alert('Ошибка авторизации', 'Не удалось создать пользователя');
       return null;
     }
     return signUpData.user;

@@ -46,7 +46,7 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
       {children || (
         <>
           <Text style={styles.text}>Смотреть рекламу</Text>
-          <Text style={styles.reward}>0.02 - 0.06 G</Text>
+          <Text style={styles.reward}>0.4 - 0.8 G</Text>
         </>
       )}
     </TouchableOpacity>
