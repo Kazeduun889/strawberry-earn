@@ -389,29 +389,3 @@ export const MockDB = {
       .eq('id', id);
   }
 };
-      .eq('id', id)
-      .single();
-
-    if (!request || request.status !== 'pending') return;
-
-    // Update status
-    await supabase
-      .from('withdrawals')
-      .update({ status: 'rejected' })
-      .eq('id', id);
-
-    // Refund user
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('balance')
-      .eq('id', request.user_id)
-      .single();
-
-    if (profile) {
-      await supabase
-        .from('profiles')
-        .update({ balance: profile.balance + request.amount })
-        .eq('id', request.user_id);
-    }
-  }
-};
