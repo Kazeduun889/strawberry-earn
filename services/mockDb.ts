@@ -156,12 +156,17 @@ export const MockDB = {
        } as any);
 
        const { error: uploadError } = await supabase.storage
-         .from('screenshots') // Using same bucket for simplicity
+         .from('screenshots')
          .upload(fileName, formData);
        
-       if (!uploadError) {
-         imageUrl = supabase.storage.from('screenshots').getPublicUrl(fileName).data.publicUrl;
+       if (uploadError) {
+         console.error('Upload error:', uploadError);
+         Alert.alert('Ошибка', 'Не удалось загрузить изображение. Проверьте соединение.');
+         return false;
        }
+
+       const { data } = supabase.storage.from('screenshots').getPublicUrl(fileName);
+       imageUrl = data.publicUrl;
     }
 
     const { error } = await supabase
@@ -173,7 +178,12 @@ export const MockDB = {
         is_admin_reply: false
       });
 
-    return !error;
+    if (error) {
+      console.error('Send message error:', error);
+      return false;
+    }
+
+    return true;
   },
 
   // Admin Support: Get All Conversations (Grouped by User)
@@ -298,6 +308,31 @@ export const MockDB = {
       .from('profiles')
       .update({ balance: current - amount })
       .eq('id', user.id);
+      
+    if (balanceError) {
+      console.error('Balance update error:', balanceError);
+      return false;
+    }
+
+    // 3. Create Withdrawal Request Record
+    const { error: requestError } = await supabase
+      .from('withdrawal_requests')
+      .insert({
+        user_id: user.id,
+        amount,
+        screenshot_uri: screenshotUrl,
+        status: 'pending'
+      });
+
+    if (requestError) {
+      console.error('Withdrawal request error:', requestError);
+      // Refund balance if request creation fails (optional but good practice)
+      await supabase.from('profiles').update({ balance: current }).eq('id', user.id);
+      return false;
+    }
+
+    return true;
+  },
 
     if (balanceError) {
       console.error('Balance error:', balanceError);
