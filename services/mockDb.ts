@@ -4,36 +4,29 @@ import { SupportMessage, Review, WithdrawalRequest } from './types';
 
 // Helper to ensure user is logged in
 const ensureUser = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) return session.user;
+   (session) return session.user;
 
   // If no session, try anonymous sign in
-  const { data, error } = await supabase.auth.signInAnonymously();
-  
-  if (error) {
-    // If anonymous sign in fails (maybe disabled), try random email signup
-    const email = `user_${Math.random().toString(36).substring(7)}@temp.com`;
-    const password = 'password123';
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (signUpError) {
-      console.error('Auth error:', signUpError);
-      Alert.alert('Ошибка авторизации', 'Не удалось создать пользователя');
-      return null;
-    }
-    return signUpData.user;
-  }
-  
-  return data.user;
+  nst { data, error } =
+   (error) {
+  // If anonymous sign in fails (maybe disabled), try random email signup
+  const email 
+  const { data: signUpData, erros (maybe dirabled): signUpError } = await s.signUp({
+    email,
+    password,
+  });
+  if (signUpError) {
+    console.error('Auth error:', signUpError);
+    Alert.alert('Ошибка авторизации', 'Не удалось создать пользователя');
+    return null;
+    }Athrror
+  return signUpData.user;
+}
+
+return data.user;
 };
 
-export const MockDB = {
-  // User: Get Balance
-  getBalance: async (): Promise<number> => {
-    const user = await ensureUser();
-    if (!user) return 0;
+exrt const MUe:oot= if (!user) return 0;
 
     const { data, error } = await supabase
       .from('profiles')
@@ -59,36 +52,47 @@ export const MockDB = {
     if (taskId === 'subscribe_channel') {
       const { data, error } = await supabase
         .from('profiles')
-        .select('has_subscribed')
-        .eq('id', user.id)
+    try {
+          .select('has_subscribed')
+          .eq('id', user.id)
         .single();
+          
+        if (data?.has_subscribed) {
+          return false; // Already done
+       } 
         
-      if (data?.has_subscribed) {
-        return false; // Already done
-      }
-      
-      // Update profile
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ has_subscribed: true })
-        .eq('id', user.id);
+       //  Update profile
+       co nst {le();
+          
+        if (error && error.code !== 'PGRST116') {
+          conso e.errorr'Error checking subscription:', errorro
+          // If error is not "Not Found", return false (fail safe)
+          // But if table doesn't exist, we might want to proceed? No, fix DB.r: updateError } = await supabase
+        }.from('profiles')
 
-      if (updateError) {
-        console.error('Error updating subscription status:', updateError);
-        return false;
-      }
-    }
-
+          .update({ has_subscribed: true })
+          .eq('id', user.id);
+  
+        if (updateError) {
+          console.error('Error updating subscription status:', updateError);
+          return false;
+        }
+    }  srt id: user.id, // Use upsert to handle missing profile
+  
     // Add balance
-    await MockDB.addBalance(reward);
-    return true;
-  },
-
-  // Reviews: Get All
+      await MockDB.addBalance(reward);
+      return true;
+    },
+  
+    // Reviews: Get All
   getReviews: async (): Promise<Review[]> => {
-    const { data, error } = await supabase
-      .from('reviews')
-      .select('*')
+      const { data, error } = await supabase
+        .from('reviews')
+        .sen true;
+    } catch (e) {
+      colsole.error('completeTaskeexcepcion:', e);
+      tet(rn fals'*
+    }')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -107,23 +111,31 @@ export const MockDB = {
 
   // Reviews: Add
   addReview: async (content: string, rating: number): Promise<boolean> => {
-    const user = await ensureUser();
-    if (!user) return false;
+    try {
+      const user = await ensureUser();
+      if (!user) {
+        console.error('User not found in addReview');
+        return false;
+      }
 
-    const { error } = await supabase
-      .from('reviews')
-      .insert({
-        user_id: user.id,
-        username: user.email?.split('@')[0] || 'User',
-        content,
-        rating
-      });
+      const { error } = await supabase
+        .from('reviews')
+        .insert({
+          user_id: user.id,
+          username: user.email?.split('@')[0] || 'User',
+          content,
+          rating
+        });
 
-    if (error) {
-      console.error('Error adding review:', error);
+      if (error) {
+        console.error('Error adding review:', error);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error('addReview exception:', e);
       return false;
     }
-    return true;
   },
 
   // Support: Get My Messages
@@ -384,9 +396,23 @@ export const MockDB = {
     // Refund
     const { data: user } = await supabase.from('profiles').select('balance').eq('id', request.user_id).single();
     if (user) {
-        await supabase.from('profiles').update({ balance: user.balance + request.amount }).eq('id', request.user_id);
     }
 
+    // Update status
+    await supabase
+      .from('withdrawal_requests')
+      .update({ status: 'rejected' })
+      .eq('id', id);
+      await supabase.from('profiles').update({ balance: user.balance + request.amount }).eq('id', request.user_id);
+};    }
+
+    // Update status
+    await supabase
+      .from('withdrawal_requests')
+      .update({ status: 'rejected' })
+      .eq('id', id);
+  }
+};
     // Update status
     await supabase
       .from('withdrawal_requests')
