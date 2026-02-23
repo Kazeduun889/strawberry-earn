@@ -1,32 +1,85 @@
 import { supabase } from './supabase';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { SupportMessage, Review, WithdrawalRequest } from './types';
 
 // Helper to ensure user is logged in
 const ensureUser = async () => {
-   (session) return session.user;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) return session.user;
 
-  // If no session, try anonymous sign in
-  nst { data, error } =
-   (error) {
-  // If anonymous sign in fails (maybe disabled), try random email signup
-  const email 
-  const { data: signUpData, erros (maybe dirabled): signUpError } = await s.signUp({
-    email,
-    password,
-  });
-  if (signUpError) {
-    console.error('Auth error:', signUpError);
-    Alert.alert('Ошибка авторизации', 'Не удалось создать пользователя');
+    // If no session, try anonymous sign in
+    console.log('No session, attempting anonymous sign in...');
+    const { data, error } = await supabase.auth.signInAnonymously();
+    
+    if (error) {
+      console.error('Anonymous auth failed:', error);
+      // If anonymous sign in fails, try random email signup as fallback
+      const email = `user_${Math.random().toString(36).substring(7)}@temp.com`;
+      const password = 'password123';
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (signUpError) {
+        console.error('Signup fallback failed:', signUpError);
+        Alert.alert('Ошибка авторизации', 'Не удалось создать пользователя. Проверьте интернет.');
+        return null;
+      }
+      return signUpData.user;
+    }
+    
+    return data.user;
+  } catch (e) {
+    console.error('ensureUser exception:', e);
     return null;
-    }Athrror
-  return signUpData.user;
-}
-
-return data.user;
+  }
 };
 
-exrt const MUe:oot= if (!user) return 0;
+// Helper: Upload Image to Supabase Storage
+const uploadImage = async (uri: string, folder: string): Promise<string | null> => {
+  try {
+    const user = await ensureUser();
+    if (!user) return null;
+
+    const fileName = `${folder}/${user.id}/${Date.now()}.jpg`;
+    
+    // Create FormData for upload
+    const formData = new FormData();
+    formData.append('file', {
+      uri: uri,
+      name: fileName,
+      type: 'image/jpeg',
+    } as any);
+
+    const { data, error } = await supabase.storage
+      .from('screenshots')
+      .upload(fileName, formData, {
+        contentType: 'image/jpeg',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('screenshots')
+      .getPublicUrl(fileName);
+      
+    return urlData.publicUrl;
+  } catch (e) {
+    console.error('Upload exception:', e);
+    return null;
+  }
+};
+
+export const MockDB = {
+  // Get User Balance
+  getBalance: async (): Promise<number> => {
+    const user = await ensureUser();
+    if (!user) return 0;
 
     const { data, error } = await supabase
       .from('profiles')
@@ -45,54 +98,68 @@ exrt const MUe:oot= if (!user) return 0;
 
   // Task Completion (Prevent duplicates)
   completeTask: async (taskId: string, reward: number): Promise<boolean> => {
-    const user = await ensureUser();
-    if (!user) return false;
-
-    // Check if task is already completed
-    if (taskId === 'subscribe_channel') {
-      const { data, error } = await supabase
-        .from('profiles')
     try {
+      const user = await ensureUser();
+      if (!user) return false;
+
+      // Check if task is already completed
+      if (taskId === 'subscribe_channel') {
+        const { data, error } = await supabase
+          .from('profiles')
           .select('has_subscribed')
           .eq('id', user.id)
-        .single();
-          
-        if (data?.has_subscribed) {
-          return false; // Already done
-       } 
-        
-       //  Update profile
-       co nst {le();
+          .single();
           
         if (error && error.code !== 'PGRST116') {
-          conso e.errorr'Error checking subscription:', errorro
-          // If error is not "Not Found", return false (fail safe)
-          // But if table doesn't exist, we might want to proceed? No, fix DB.r: updateError } = await supabase
-        }.from('profiles')
+          console.error('Error checking subscription:', error);
+        }
 
-          .update({ has_subscribed: true })
+        if (data?.has_subscribed) {
+          return false; // Already done
+        }
+        
+        // Update profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .upsert({ id: user.id, has_subscribed: true })
           .eq('id', user.id);
-  
+
         if (updateError) {
           console.error('Error updating subscription status:', updateError);
           return false;
         }
-    }  srt id: user.id, // Use upsert to handle missing profile
-  
-    // Add balance
+      }
+
+      // Add balance
       await MockDB.addBalance(reward);
       return true;
-    },
-  
-    // Reviews: Get All
-  getReviews: async (): Promise<Review[]> => {
-      const { data, error } = await supabase
-        .from('reviews')
-        .sen true;
     } catch (e) {
-      colsole.error('completeTaskeexcepcion:', e);
-      tet(rn fals'*
-    }')
+      console.error('completeTask exception:', e);
+      return false;
+    }
+  },
+
+  // Check Task Status
+  checkTaskStatus: async (taskId: string): Promise<boolean> => {
+    const user = await ensureUser();
+    if (!user) return false;
+
+    if (taskId === 'subscribe_channel') {
+      const { data } = await supabase
+        .from('profiles')
+        .select('has_subscribed')
+        .eq('id', user.id)
+        .single();
+      return !!data?.has_subscribed;
+    }
+    return false;
+  },
+
+  // Reviews: Get All
+  getReviews: async (): Promise<Review[]> => {
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -158,54 +225,43 @@ exrt const MUe:oot= if (!user) return 0;
 
   // Support: Send Message (User)
   sendSupportMessage: async (content: string, imageUri?: string): Promise<boolean> => {
-    const user = await ensureUser();
-    if (!user) return false;
+    try {
+      const user = await ensureUser();
+      if (!user) return false;
 
-    let imageUrl = null;
+      let imageUrl = null;
 
-    if (imageUri) {
-       const fileName = `support/${user.id}/${Date.now()}.jpg`;
-       const formData = new FormData();
-       formData.append('file', {
-         uri: imageUri,
-         name: fileName,
-         type: 'image/jpeg',
-       } as any);
+      if (imageUri) {
+        imageUrl = await uploadImage(imageUri, 'support');
+        if (!imageUrl) {
+          Alert.alert('Ошибка', 'Не удалось загрузить изображение.');
+          return false;
+        }
+      }
 
-       const { error: uploadError } = await supabase.storage
-         .from('screenshots')
-         .upload(fileName, formData);
-       
-       if (uploadError) {
-         console.error('Upload error:', uploadError);
-         Alert.alert('Ошибка', 'Не удалось загрузить изображение. Проверьте соединение.');
-         return false;
-       }
+      const { error } = await supabase
+        .from('support_messages')
+        .insert({
+          user_id: user.id,
+          content,
+          image_url: imageUrl,
+          is_admin_reply: false
+        });
 
-       const { data } = supabase.storage.from('screenshots').getPublicUrl(fileName);
-       imageUrl = data.publicUrl;
-    }
+      if (error) {
+        console.error('Send message error:', error);
+        return false;
+      }
 
-    const { error } = await supabase
-      .from('support_messages')
-      .insert({
-        user_id: user.id,
-        content,
-        image_url: imageUrl,
-        is_admin_reply: false
-      });
-
-    if (error) {
-      console.error('Send message error:', error);
+      return true;
+    } catch (e) {
+      console.error('sendSupportMessage exception:', e);
       return false;
     }
-
-    return true;
   },
 
   // Admin Support: Get All Conversations (Grouped by User)
   getSupportUsers: async (): Promise<{userId: string, lastMessage: string, lastDate: number}[]> => {
-    // This is complex in simple SQL. We'll fetch all and group in JS for this mock.
     const { data, error } = await supabase
       .from('support_messages')
       .select('*')
@@ -251,22 +307,6 @@ exrt const MUe:oot= if (!user) return 0;
     return !error;
   },
 
-  // Check Task Status
-  checkTaskStatus: async (taskId: string): Promise<boolean> => {
-    const user = await ensureUser();
-    if (!user) return false;
-
-    if (taskId === 'subscribe_channel') {
-      const { data } = await supabase
-        .from('profiles')
-        .select('has_subscribed')
-        .eq('id', user.id)
-        .single();
-      return !!data?.has_subscribed;
-    }
-    return false;
-  },
-
   // User: Add Balance (Ad reward)
   addBalance: async (amount: number): Promise<number> => {
     const user = await ensureUser();
@@ -291,64 +331,54 @@ exrt const MUe:oot= if (!user) return 0;
 
   // User: Create Withdrawal Request
   createWithdrawal: async (amount: number, screenshotUri: string, skinName: string): Promise<boolean> => {
-    const user = await ensureUser();
-    if (!user) return false;
+    try {
+      const user = await ensureUser();
+      if (!user) return false;
 
-    const current = await MockDB.getBalance();
-    if (current < amount) return false;
+      const current = await MockDB.getBalance();
+      if (current < amount) return false;
 
-    // 1. Upload screenshot
-    const fileName = `${user.id}/${Date.now()}.jpg`;
-    const formData = new FormData();
-    formData.append('file', {
-      uri: screenshotUri,
-      name: fileName,
-      type: 'image/jpeg',
-    } as any);
+      // 1. Upload screenshot
+      const screenshotUrl = await uploadImage(screenshotUri, 'withdrawals');
+      if (!screenshotUrl) {
+        Alert.alert('Ошибка', 'Не удалось загрузить скриншот.');
+        return false;
+      }
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('screenshots')
-      .upload(fileName, formData, {
-        contentType: 'image/jpeg',
-      });
+      // 2. Deduct balance
+      const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ balance: current - amount })
+        .eq('id', user.id);
+        
+      if (balanceError) {
+        console.error('Balance update error:', balanceError);
+        return false;
+      }
 
-    if (uploadError) {
-      Alert.alert('Ошибка загрузки', 'Проверьте, создан ли бакет "screenshots" (public) в Supabase');
-      console.error('Upload error:', uploadError);
+      // 3. Create Withdrawal Request Record
+      const { error: requestError } = await supabase
+        .from('withdrawal_requests')
+        .insert({
+          user_id: user.id,
+          amount,
+          screenshot_uri: screenshotUrl,
+          status: 'pending',
+          skin_name: skinName
+        });
+
+      if (requestError) {
+        console.error('Withdrawal request error:', requestError);
+        // Refund balance if request creation fails
+        await supabase.from('profiles').update({ balance: current }).eq('id', user.id);
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      console.error('createWithdrawal exception:', e);
       return false;
     }
-
-    const screenshotUrl = supabase.storage.from('screenshots').getPublicUrl(fileName).data.publicUrl;
-
-    // 2. Deduct balance
-    const { error: balanceError } = await supabase
-      .from('profiles')
-      .update({ balance: current - amount })
-      .eq('id', user.id);
-      
-    if (balanceError) {
-      console.error('Balance update error:', balanceError);
-      return false;
-    }
-
-    // 3. Create Withdrawal Request Record
-    const { error: requestError } = await supabase
-      .from('withdrawal_requests')
-      .insert({
-        user_id: user.id,
-        amount,
-        screenshot_uri: screenshotUrl,
-        status: 'pending'
-      });
-
-    if (requestError) {
-      console.error('Withdrawal request error:', requestError);
-      // Refund balance if request creation fails (optional but good practice)
-      await supabase.from('profiles').update({ balance: current }).eq('id', user.id);
-      return false;
-    }
-
-    return true;
   },
 
   // Admin: Get All Requests
