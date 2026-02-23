@@ -1,8 +1,4 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { useState } from 'react';
-import { AdsgramTask } from '../../components/AdsgramTask';
-
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
 import { AdsgramTask } from '../../components/AdsgramTask';
 import { MockDB } from '../../services/mockDb';
