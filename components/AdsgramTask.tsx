@@ -33,6 +33,11 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
   const showAd = useCallback(async () => {
     console.log('Adsgram click, blockId:', blockId);
     
+    // Detailed check of what's happening
+    const isLoadedOnWindow = !!window.Adsgram;
+    const loadErrorFlag = (window as any).adsgramLoadError;
+    const loadedFlag = (window as any).adsgramLoaded;
+
     if (Platform.OS === 'web') {
       if (window.Adsgram) {
         const AdController = window.Adsgram.init({ blockId });
@@ -45,15 +50,21 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
           if (error && error.error === 'ad_not_shown') {
             safeAlert('Инфо', 'Реклама не была досмотрена до конца.');
           } else if (error && error.error === 'no_ads') {
-            safeAlert('Ошибка', 'В данный момент рекламы нет. Попробуйте позже.');
+            safeAlert('Ошибка', 'В данный момент рекламы нет (no_ads). Попробуйте позже.');
           } else {
-            const errorMsg = error?.description || error?.message || 'Неизвестная ошибка';
+            const errorMsg = error?.description || error?.message || JSON.stringify(error);
             if (onError) onError(error);
-            else safeAlert('Ошибка рекламы', `Ошибка: ${errorMsg}. Попробуйте еще раз через минуту.`);
+            else safeAlert('Ошибка рекламы', `Ошибка: ${errorMsg}`);
           }
         }
       } else {
-        safeAlert('Ошибка', 'Рекламный сервис не загружен. Если вы используете VPN или AdBlock — выключите их и перезапустите Mini App.');
+        safeAlert('Ошибка загрузки', 
+          `Рекламный сервис не загружен.\n\n` +
+          `Статус в HTML: ${loadedFlag ? 'OK' : 'FAIL'}\n` +
+          `Ошибка сети: ${loadErrorFlag ? 'ДА' : 'НЕТ'}\n` +
+          `Объект на window: ${isLoadedOnWindow ? 'ЕСТЬ' : 'НЕТ'}\n\n` +
+          `Попробуйте выключить AdBlock/VPN или сменить Wi-Fi на 4G.`
+        );
       }
     } else {
       safeAlert('Инфо', 'Реклама доступна только внутри Telegram.');
