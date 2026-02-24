@@ -157,41 +157,43 @@ export const MockDB = {
         return false;
       }
 
-      console.log(`Starting completeTask for taskId: ${taskId}, reward: ${reward}`);
+      console.log(`[Task] Starting: ${taskId}, reward: ${reward}, UID: ${user.id}`);
 
       if (taskId === 'subscribe_channel') {
-        // Simple and robust update
-        const { data: updatedProfile, error: updateError } = await supabase
-          .from('profiles')
-          .update({ 
-            has_subscribed: true,
-            balance: supabase.rpc('increment_balance', { x: reward }) // If RPC exists, or just manual:
-          })
-          .eq('id', user.id)
-          .select()
-          .single();
-
-        // If manual increment is safer (standard way)
         const currentBal = await MockDB.getBalance();
-        const { error: manualError } = await supabase
-          .from('profiles')
-          .update({ 
-            has_subscribed: true,
-            balance: currentBal + reward
-          })
-          .eq('id', user.id);
+        const newBalance = currentBal + reward;
 
-        if (manualError) {
-          console.error('Update sub error:', manualError);
-          safeAlert('Ошибка БД', 'Не удалось сохранить выполнение: ' + manualError.message);
+        // CRITICAL: Using UPSERT to be absolutely sure record is written
+        const { error: upsertError } = await supabase
+          .from('profiles')
+          .upsert({ 
+            id: user.id,
+            has_subscribed: true,
+            balance: newBalance,
+            email: user.email || `user_${user.id.substring(0, 8)}`
+          }, { onConflict: 'id' });
+
+        if (upsertError) {
+          console.error('[Task] Upsert error:', upsertError.message);
+          safeAlert('Ошибка БД', 'Не удалось сохранить подписку: ' + upsertError.message);
           return false;
         }
         
-        console.log('Task completed successfully');
-        return true;
+        // Final verification from DB
+        const { data: verifyData } = await supabase.from('profiles').select('has_subscribed, balance').eq('id', user.id).single();
+        console.log('[Task] Verification result:', verifyData);
+
+        if (verifyData?.has_subscribed && verifyData.balance >= newBalance) {
+           console.log('[Task] SUCCESS verified');
+           return true;
+        } else {
+           console.error('[Task] Verification failed after upsert');
+           safeAlert('Ошибка', 'Данные не сохранились в базе. Попробуйте нажать кнопку еще раз.');
+           return false;
+        }
       }
 
-      // Generic task handling
+      // Generic task handling (like ads)
       const currentBalance = await MockDB.getBalance();
       const { error: balError } = await supabase
         .from('profiles')
@@ -205,7 +207,7 @@ export const MockDB = {
 
       return true;
     } catch (e) {
-      console.error('Critical task error:', e);
+      console.error('[Task] Exception:', e);
       safeAlert('Критическая ошибка задания', (e as Error).message);
       return false;
     }

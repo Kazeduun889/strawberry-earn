@@ -33,13 +33,19 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
   // Manual script injection on mount
   React.useEffect(() => {
     if (Platform.OS === 'web' && !window.Adsgram) {
-      console.log('Adsgram script missing, injecting...');
+      console.log('Adsgram script missing, injecting standard script...');
       const script = document.createElement('script');
-      script.src = `https://adsgram.ai/js/adsgram.js?blockId=${blockId}`;
+      script.src = `https://adsgram.ai/js/adsgram.js`; // Standard URL
       script.async = true;
+      script.onload = () => {
+         console.log('Adsgram SDK loaded successfully');
+      };
+      script.onerror = () => {
+         console.error('Adsgram SDK failed to load (Check internet/AdBlock)');
+      };
       document.head.appendChild(script);
     }
-  }, [blockId]);
+  }, []);
 
   const showAd = useCallback(async () => {
     console.log('Adsgram click, blockId:', blockId);
