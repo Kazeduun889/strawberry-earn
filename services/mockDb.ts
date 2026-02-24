@@ -159,36 +159,46 @@ export const MockDB = {
         return false;
       }
 
-      if (taskId === 'subscribe_channel') {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('has_subscribed')
-          .eq('id', user.id)
-          .single();
-          
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error('Check task error:', profileError);
-          safeAlert('Ошибка проверки', profileError.message);
-          return false;
-        }
+      // Check current status before anything
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('has_subscribed, balance')
+        .eq('id', user.id)
+        .single();
+        
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Check task error:', profileError);
+        safeAlert('Ошибка проверки', profileError.message);
+        return false;
+      }
 
+      if (taskId === 'subscribe_channel') {
         if (profile?.has_subscribed) {
           safeAlert('Инфо', 'Награда уже была начислена ранее');
-          return false; 
+          return true; // Already done, return true to hide UI
         }
+        
+        // UPDATE SUB STATUS AND BALANCE IN ONE GO IF POSSIBLE
+        // But since we don't have a single RPC, let's do them sequentially with error check
+        const newBalance = (profile?.balance || 0) + reward;
         
         const { error: updateError } = await supabase
           .from('profiles')
-          .update({ has_subscribed: true })
+          .update({ 
+            has_subscribed: true,
+            balance: newBalance
+          })
           .eq('id', user.id);
 
         if (updateError) {
-          safeAlert('Ошибка БД', 'Не удалось обновить статус подписки: ' + updateError.message);
+          safeAlert('Ошибка БД', 'Не удалось сохранить выполнение: ' + updateError.message);
           return false;
         }
+        
+        return true;
       }
 
-      // Add balance with more checks
+      // Generic task handling
       const currentBalance = await MockDB.getBalance();
       const { error: balError } = await supabase
         .from('profiles')
