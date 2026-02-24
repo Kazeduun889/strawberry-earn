@@ -26,10 +26,15 @@ export default function EarnScreen() {
   const handleAdReward = async () => {
     // Random reward between 1.0 and 1.5
     const reward = parseFloat((Math.random() * (1.5 - 1.0) + 1.0).toFixed(2));
-    await MockDB.addBalance(reward);
-    const newBal = await MockDB.getBalance();
-    setPoints(newBal);
-    Alert.alert('Успех', `Реклама просмотрена! +${reward} G`);
+    const success = await MockDB.addBalance(reward);
+    
+    if (success) {
+      const newBal = await MockDB.getBalance();
+      setPoints(newBal);
+      Alert.alert('Успех', `Реклама просмотрена! +${reward} G`);
+    } else {
+      Alert.alert('Ошибка', 'Не удалось начислить награду за рекламу');
+    }
   };
 
   const handleSubscribe = async () => {

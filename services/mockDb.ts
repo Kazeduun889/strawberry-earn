@@ -53,19 +53,28 @@ const uploadImage = async (uri: string, folder: string): Promise<string | null> 
     const ext = uri.split('.').pop() || 'jpg';
     const fileName = `${folder}/${user.id}/${Date.now()}.${ext}`;
     
+    // Improved Blob handling for React Native
     const response = await fetch(uri);
     const blob = await response.blob();
+    
+    // Explicitly set the file object structure for Supabase
+    const file = {
+      uri: uri,
+      name: fileName,
+      type: `image/${ext === 'png' ? 'png' : 'jpeg'}`,
+    };
 
     const { data, error } = await supabase.storage
       .from('screenshots')
       .upload(fileName, blob, {
         contentType: `image/${ext === 'png' ? 'png' : 'jpeg'}`,
-        upsert: true
+        upsert: true,
+        cacheControl: '3600'
       });
 
     if (error) {
-      console.error('Upload error:', error.message);
-      Alert.alert('Ошибка загрузки', 'Не удалось загрузить фото в базу. Ошибка: ' + error.message);
+      console.error('Detailed Upload error:', error);
+      Alert.alert('Ошибка загрузки', `Не удалось отправить файл: ${error.message} (Код: ${error.name})`);
       return null;
     }
 
@@ -76,7 +85,7 @@ const uploadImage = async (uri: string, folder: string): Promise<string | null> 
     return urlData.publicUrl;
   } catch (e) {
     console.error('Upload exception:', e);
-    Alert.alert('Ошибка загрузки', 'Ошибка при обработке фото: ' + (e as Error).message);
+    Alert.alert('Критическая ошибка загрузки', (e as Error).message);
     return null;
   }
 };
@@ -108,7 +117,10 @@ export const MockDB = {
   completeTask: async (taskId: string, reward: number): Promise<boolean> => {
     try {
       const user = await ensureUser();
-      if (!user) return false;
+      if (!user) {
+        Alert.alert('Ошибка', 'Не удалось определить пользователя');
+        return false;
+      }
 
       if (taskId === 'subscribe_channel') {
         const { data: profile, error: profileError } = await supabase
@@ -117,8 +129,14 @@ export const MockDB = {
           .eq('id', user.id)
           .single();
           
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error('Check task error:', profileError);
+          Alert.alert('Ошибка проверки', profileError.message);
+          return false;
+        }
+
         if (profile?.has_subscribed) {
-          Alert.alert('Инфо', 'Вы уже получили награду за подписку.');
+          Alert.alert('Инфо', 'Награда уже была начислена ранее');
           return false; 
         }
         
@@ -128,11 +146,12 @@ export const MockDB = {
           .eq('id', user.id);
 
         if (updateError) {
-          Alert.alert('Ошибка', 'Не удалось обновить статус подписки в базе: ' + updateError.message);
+          Alert.alert('Ошибка БД', 'Не удалось обновить статус подписки: ' + updateError.message);
           return false;
         }
       }
 
+      // Add balance with more checks
       const currentBalance = await MockDB.getBalance();
       const { error: balError } = await supabase
         .from('profiles')
@@ -140,13 +159,13 @@ export const MockDB = {
         .eq('id', user.id);
 
       if (balError) {
-        Alert.alert('Ошибка', 'Не удалось начислить награду в базу: ' + balError.message);
+        Alert.alert('Ошибка БД', 'Не удалось начислить баланс: ' + balError.message);
         return false;
       }
 
       return true;
     } catch (e) {
-      Alert.alert('Ошибка', 'Ошибка выполнения задания: ' + (e as Error).message);
+      Alert.alert('Критическая ошибка задания', (e as Error).message);
       return false;
     }
   },
