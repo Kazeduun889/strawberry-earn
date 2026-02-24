@@ -258,6 +258,18 @@ export const MockDB = {
         return false;
       }
 
+      // Check if user already has a review
+      const { data: existingReview, error: checkError } = await supabase
+        .from('reviews')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingReview) {
+        safeAlert('Ограничение', 'Вы уже оставляли отзыв. Больше одного отзыва писать нельзя!');
+        return false;
+      }
+
       const { error } = await supabase
         .from('reviews')
         .insert({

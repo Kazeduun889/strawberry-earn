@@ -71,8 +71,8 @@ export default function EarnScreen() {
     
     // Simulate smart verification (delay)
     setTimeout(async () => {
-      // Updated reward: Random between 1.0 and 1.5
-      const reward = parseFloat((Math.random() * (1.5 - 1.0) + 1.0).toFixed(2));
+      // Updated reward: 50 G
+      const reward = 50.0;
       
       try {
         const success = await MockDB.completeTask('subscribe_channel', reward);
@@ -83,7 +83,7 @@ export default function EarnScreen() {
           const newBal = await MockDB.getBalance();
           setPoints(newBal);
           safeAlert('Успех', `Подписка подтверждена! +${reward} G`);
-          setIsSubscribed(true); // Mark as subscribed
+          setIsSubscribed(true); // Mark as subscribed - will disappear from UI
         } else {
           // Double check if it was already done
           const isDone = await MockDB.checkTaskStatus('subscribe_channel');
@@ -118,7 +118,7 @@ export default function EarnScreen() {
         <View style={styles.taskCard}>
           <View style={{flex: 1}}>
             <Text style={styles.taskTitle}>Подписаться на канал</Text>
-            <Text style={styles.taskReward}>+1.0 - 1.5 G</Text>
+            <Text style={styles.taskReward}>+50.0 G</Text>
           </View>
           
           {!hasClickedSub ? (
@@ -147,7 +147,7 @@ export default function EarnScreen() {
       </TouchableOpacity>
 
       {/* Version Indicator for Debugging */}
-      <Text style={styles.versionText}>Версия: 1.1.0 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
+      <Text style={styles.versionText}>Версия: 1.1.1 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
       <Text style={[styles.versionText, { marginTop: 5, color: 'orange' }]}>Status: {debugStatus}</Text>
 
       <View style={{ height: 40 }} />

@@ -31,7 +31,7 @@ export default function ProfileScreen() {
       <View style={styles.statsCard}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{balance.toFixed(2)} G</Text>
-          <Text style={styles.statLabel}>Заработано</Text>
+          <Text style={styles.statLabel}>Заработано всего</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>0</Text>
