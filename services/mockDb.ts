@@ -267,7 +267,11 @@ export const MockDB = {
       let imageUrl = null;
       if (imageUri) {
         imageUrl = await uploadImage(imageUri, 'support');
-        if (!imageUrl) return false; 
+        if (!imageUrl) {
+          console.error('Support image upload failed');
+          // We continue even if image fails, or should we stop? Let's stop to be safe.
+          return false;
+        }
       }
 
       const { error } = await supabase
