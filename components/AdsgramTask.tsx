@@ -30,6 +30,17 @@ const safeAlert = (title: string, msg?: string) => {
 };
 
 export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError, children }) => {
+  // Manual script injection on mount
+  React.useEffect(() => {
+    if (Platform.OS === 'web' && !window.Adsgram) {
+      console.log('Adsgram script missing, injecting...');
+      const script = document.createElement('script');
+      script.src = `https://adsgram.ai/js/adsgram.js?blockId=${blockId}`;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }, [blockId]);
+
   const showAd = useCallback(async () => {
     console.log('Adsgram click, blockId:', blockId);
     

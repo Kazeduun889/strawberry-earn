@@ -132,23 +132,21 @@ export const MockDB = {
     try {
       const user = await ensureUser();
       if (!user) return 0;
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('balance')
-        .eq('id', user.id)
-        .single();
-
+      const { data, error } = await supabase.from('profiles').select('balance').eq('id', user.id).maybeSingle();
       if (error) {
-        if (error.code === 'PGRST116') return 0;
-        console.error('Get balance error:', error.message);
-        return 0;
+         console.error('Balance error:', error.message);
+         return 0;
       }
-
       return data?.balance || 0;
     } catch (e) {
+      console.error('Balance exception:', e);
       return 0;
     }
+  },
+
+  getCurrentUser: async () => {
+    const user = await ensureUser();
+    return user?.id || 'None';
   },
 
   completeTask: async (taskId: string, reward: number): Promise<boolean> => {

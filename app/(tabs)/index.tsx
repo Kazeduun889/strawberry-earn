@@ -26,7 +26,9 @@ export default function EarnScreen() {
     // Load initial balance
     MockDB.getBalance().then((bal) => {
       setPoints(bal);
-      setDebugStatus('DB Connected. Balance loaded.');
+      MockDB.getCurrentUser().then(uid => {
+        setDebugStatus(`UID: ${uid.substring(0, 8)}... | Bal: ${bal}`);
+      });
     }).catch(e => {
       setDebugStatus('DB Error: ' + e.message);
     });
@@ -147,7 +149,7 @@ export default function EarnScreen() {
       </TouchableOpacity>
 
       {/* Version Indicator for Debugging */}
-      <Text style={styles.versionText}>Версия: 1.1.4 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
+      <Text style={styles.versionText}>Версия: 1.1.5 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
       <Text style={[styles.versionText, { marginTop: 5, color: 'orange' }]}>Status: {debugStatus}</Text>
 
       <View style={{ height: 40 }} />
