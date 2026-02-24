@@ -64,8 +64,8 @@ const ensureUser = async () => {
     if (data.user) {
       const { error: profileError } = await supabase.from('profiles').upsert({ 
         id: data.user.id, 
-        balance: 0,
-        email: data.user.email || `user_${data.user.id.substring(0, 8)}`
+        balance: 0
+        // removed email
       }, { onConflict: 'id' });
       
       if (profileError) {
@@ -163,14 +163,14 @@ export const MockDB = {
         const currentBal = await MockDB.getBalance();
         const newBalance = currentBal + reward;
 
-        // CRITICAL: Using UPSERT to be absolutely sure record is written
+        // CRITICAL: REMOVED 'email' column because it's missing in your DB schema
         const { error: upsertError } = await supabase
           .from('profiles')
           .upsert({ 
             id: user.id,
             has_subscribed: true,
-            balance: newBalance,
-            email: user.email || `user_${user.id.substring(0, 8)}`
+            balance: newBalance
+            // email removed here
           }, { onConflict: 'id' });
 
         if (upsertError) {
