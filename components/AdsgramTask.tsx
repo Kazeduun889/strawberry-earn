@@ -57,8 +57,8 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
       // Try to re-inject if missing
       if (!window.Adsgram) {
         injectScript();
-        // Wait a tiny bit for script to potentially load
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait a bit for script to potentially load
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
       if (window.Adsgram) {
@@ -67,16 +67,21 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
           await AdController.show();
           onReward();
         } catch (error: any) {
-          console.error('Adsgram error:', error);
+          console.error('Detailed Adsgram error object:', JSON.stringify(error));
+          
           if (error && error.error === 'ad_not_shown') {
             safeAlert('Инфо', 'Реклама не была досмотрена до конца.');
+          } else if (error && error.error === 'no_ads') {
+            safeAlert('Ошибка', 'В данный момент рекламы нет. Попробуйте через пару минут.');
           } else {
+            const errorType = error?.error || 'Unknown';
+            const errorDesc = error?.description || 'No description';
             if (onError) onError(error);
-            else safeAlert('Ошибка рекламы', 'Реклама временно недоступна. Попробуйте нажать еще раз через пару секунд.');
+            else safeAlert('Ошибка рекламы', `Тип: ${errorType}\nОписание: ${errorDesc}\n\nПопробуйте нажать еще раз.`);
           }
         }
       } else {
-        safeAlert('Ошибка', 'Рекламный сервис загружается. Попробуйте нажать еще раз через пару секунд.');
+        safeAlert('Ошибка', 'SDK рекламы не отвечает. Если у вас включен AdBlock или VPN, выключите их и перезапустите приложение.');
       }
     } else {
       safeAlert('Инфо', 'Реклама доступна только внутри Telegram.');
