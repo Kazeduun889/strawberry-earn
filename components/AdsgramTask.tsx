@@ -1,6 +1,16 @@
 import React, { useCallback } from 'react';
 import { TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 
+declare global {
+  interface Window {
+    Adsgram?: {
+      init: (params: { blockId: string; debug?: boolean }) => {
+        show: () => Promise<void>;
+      };
+    };
+  }
+}
+
 interface AdsgramProps {
   blockId: string;
   onReward: () => void;
