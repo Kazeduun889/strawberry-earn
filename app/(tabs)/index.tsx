@@ -54,24 +54,30 @@ export default function EarnScreen() {
     setTimeout(async () => {
       // Updated reward: Random between 1.0 and 1.5
       const reward = parseFloat((Math.random() * (1.5 - 1.0) + 1.0).toFixed(2));
-      const success = await MockDB.completeTask('subscribe_channel', reward);
       
-      setIsCheckingSub(false);
-      
-      if (success) {
-        const newBal = await MockDB.getBalance();
-        setPoints(newBal);
-        Alert.alert('Успех', `Подписка подтверждена! +${reward} G`);
-        setIsSubscribed(true); // Mark as subscribed
-      } else {
-        // Double check if it was already done
-        const isDone = await MockDB.checkTaskStatus('subscribe_channel');
-        if (isDone) {
-           setIsSubscribed(true);
-           Alert.alert('Инфо', 'Вы уже получили награду за это задание');
+      try {
+        const success = await MockDB.completeTask('subscribe_channel', reward);
+        
+        setIsCheckingSub(false);
+        
+        if (success) {
+          const newBal = await MockDB.getBalance();
+          setPoints(newBal);
+          Alert.alert('Успех', `Подписка подтверждена! +${reward} G`);
+          setIsSubscribed(true); // Mark as subscribed
         } else {
-           Alert.alert('Ошибка', 'Не удалось проверить подписку. Попробуйте еще раз.');
+          // Double check if it was already done
+          const isDone = await MockDB.checkTaskStatus('subscribe_channel');
+          if (isDone) {
+             setIsSubscribed(true);
+             Alert.alert('Инфо', 'Вы уже получили награду за это задание');
+          } else {
+             Alert.alert('Ошибка', 'Не удалось проверить подписку. Попробуйте еще раз.');
+          }
         }
+      } catch (err) {
+        setIsCheckingSub(false);
+        Alert.alert('Ошибка проверки', (err as Error).message);
       }
     }, 3000); // 3 seconds delay for "verification"
   };
@@ -85,8 +91,8 @@ export default function EarnScreen() {
 
       <Text style={styles.sectionTitle}>Доступные задания</Text>
 
-      {/* Replace with your actual Block ID from Adsgram */}
-      <AdsgramTask blockId="23585" onReward={handleAdReward} />
+      {/* Adsgram Task with Block ID 23633 */}
+      <AdsgramTask blockId="23633" onReward={handleAdReward} />
 
       {/* Subscription Task with Smart Verification */}
       {!isSubscribed && (
