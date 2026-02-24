@@ -53,16 +53,19 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
   const showAd = useCallback(async () => {
     console.log('Adsgram click, blockId:', blockId);
     
+    // Check if script exists in DOM
+    const scriptExists = !!document.getElementById('adsgram-sdk-script') || !!window.Adsgram;
+    console.log('Adsgram: Script in DOM?', !!document.getElementById('adsgram-sdk-script'));
+    console.log('Adsgram: window.Adsgram exists?', !!window.Adsgram);
+
     if (Platform.OS === 'web') {
-      // Try to re-inject if missing
       if (!window.Adsgram) {
+        safeAlert('Диагностика', `SDK не найден.\nВ DOM: ${!!document.getElementById('adsgram-sdk-script')}\nНа window: ${!!window.Adsgram}\n\nПробую переподключить...`);
         injectScript();
-        // Wait a bit for script to potentially load
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        return;
       }
 
-      if (window.Adsgram) {
-        const AdController = window.Adsgram.init({ blockId });
+      const AdController = window.Adsgram.init({ blockId });
         try {
           await AdController.show();
           onReward();
