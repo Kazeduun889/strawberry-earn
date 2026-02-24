@@ -33,16 +33,27 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
   const injectScript = useCallback(() => {
     if (Platform.OS !== 'web' || window.Adsgram) return;
     
-    console.log('Adsgram: Silent injection...');
+    console.log('Adsgram: Loading SDK...');
     const scriptId = 'adsgram-sdk-script';
-    const existingScript = document.getElementById(scriptId);
-    if (existingScript) existingScript.remove();
+    
+    // Remove if already exists to retry fresh
+    const existing = document.getElementById(scriptId);
+    if (existing) existing.remove();
 
     const script = document.createElement('script');
     script.id = scriptId;
     script.src = `https://adsgram.ai/js/adsgram.js`;
-    script.async = true;
-    document.head.appendChild(script);
+    script.async = false; // Disable async to force immediate execution
+    
+    script.onload = () => {
+      console.log('Adsgram: Script loaded into DOM and executed');
+    };
+    
+    script.onerror = () => {
+      console.error('Adsgram: Network error while loading script');
+    };
+
+    document.body.appendChild(script); // Append to body instead of head
   }, []);
 
   // Manual script injection on mount
@@ -53,15 +64,12 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
   const showAd = useCallback(async () => {
     console.log('Adsgram click, blockId:', blockId);
     
-    // Check if script exists in DOM
-    const scriptExists = !!document.getElementById('adsgram-sdk-script') || !!window.Adsgram;
-    console.log('Adsgram: Script in DOM?', !!document.getElementById('adsgram-sdk-script'));
-    console.log('Adsgram: window.Adsgram exists?', !!window.Adsgram);
-
     if (Platform.OS === 'web') {
       if (!window.Adsgram) {
-        safeAlert('Диагностика', `SDK не найден.\nВ DOM: ${!!document.getElementById('adsgram-sdk-script')}\nНа window: ${!!window.Adsgram}\n\nПробую переподключить...`);
+        // Try one more time to inject
         injectScript();
+        
+        safeAlert('Инфо', 'Рекламный сервис подгружается. Пожалуйста, подождите 3 секунды и нажмите еще раз.');
         return;
       }
 
