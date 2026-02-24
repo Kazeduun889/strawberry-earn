@@ -30,71 +30,35 @@ const safeAlert = (title: string, msg?: string) => {
 };
 
 export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError, children }) => {
-  const injectScript = useCallback(() => {
-    if (Platform.OS !== 'web' || window.Adsgram) return;
-    
-    console.log('Adsgram: Loading SDK...');
-    const scriptId = 'adsgram-sdk-script';
-    
-    // Remove if already exists to retry fresh
-    const existing = document.getElementById(scriptId);
-    if (existing) existing.remove();
-
-    const script = document.createElement('script');
-    script.id = scriptId;
-    script.src = `https://adsgram.ai/js/adsgram.js`;
-    script.async = false; // Disable async to force immediate execution
-    
-    script.onload = () => {
-      console.log('Adsgram: Script loaded into DOM and executed');
-    };
-    
-    script.onerror = () => {
-      console.error('Adsgram: Network error while loading script');
-    };
-
-    document.body.appendChild(script); // Append to body instead of head
-  }, []);
-
-  // Manual script injection on mount
-  React.useEffect(() => {
-    injectScript();
-  }, [injectScript]);
-
   const showAd = useCallback(async () => {
     console.log('Adsgram click, blockId:', blockId);
     
     if (Platform.OS === 'web') {
-      if (!window.Adsgram) {
-        // Try one more time to inject
-        injectScript();
-        
-        safeAlert('Инфо', 'Рекламный сервис подгружается. Пожалуйста, подождите 3 секунды и нажмите еще раз.');
-        return;
-      }
-
-      const AdController = window.Adsgram.init({ blockId });
-      try {
-        await AdController.show();
-        onReward();
-      } catch (error: any) {
-        console.error('Detailed Adsgram error object:', JSON.stringify(error));
-        
-        if (error && error.error === 'ad_not_shown') {
-          safeAlert('Инфо', 'Реклама не была досмотрена до конца.');
-        } else if (error && error.error === 'no_ads') {
-          safeAlert('Ошибка', 'В данный момент рекламы нет. Попробуйте через пару минут.');
-        } else {
-          const errorType = error?.error || 'Unknown';
-          const errorDesc = error?.description || 'No description';
-          if (onError) onError(error);
-          else safeAlert('Ошибка рекламы', `Тип: ${errorType}\nОписание: ${errorDesc}\n\nПопробуйте нажать еще раз.`);
+      if (window.Adsgram) {
+        const AdController = window.Adsgram.init({ blockId });
+        try {
+          await AdController.show();
+          onReward();
+        } catch (error: any) {
+          console.error('Detailed Adsgram error:', error);
+          
+          if (error && error.error === 'ad_not_shown') {
+            safeAlert('Инфо', 'Реклама не была досмотрена до конца.');
+          } else if (error && error.error === 'no_ads') {
+            safeAlert('Ошибка', 'В данный момент рекламы нет. Попробуйте позже.');
+          } else {
+            const errorMsg = error?.description || error?.message || 'Неизвестная ошибка';
+            if (onError) onError(error);
+            else safeAlert('Ошибка рекламы', `Ошибка: ${errorMsg}. Попробуйте еще раз через минуту.`);
+          }
         }
+      } else {
+        safeAlert('Ошибка', 'Рекламный сервис не загружен. Если вы используете VPN или AdBlock — выключите их и перезапустите Mini App.');
       }
     } else {
       safeAlert('Инфо', 'Реклама доступна только внутри Telegram.');
     }
-  }, [blockId, onReward, onError, injectScript]);
+  }, [blockId, onReward, onError]);
 
   return (
     <TouchableOpacity style={styles.button} onPress={showAd} activeOpacity={0.7}>
