@@ -1,4 +1,3 @@
-import React, { useEffect, useCallback } from 'react';
 import React, { useCallback } from 'react';
 import { TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 
