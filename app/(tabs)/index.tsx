@@ -128,7 +128,7 @@ export default function EarnScreen() {
       </TouchableOpacity>
 
       {/* Version Indicator for Debugging */}
-      <Text style={styles.versionText}>Версия: 1.0.5 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
+      <Text style={styles.versionText}>Версия: 1.0.6 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
 
       <View style={{ height: 40 }} />
     </ScrollView>
