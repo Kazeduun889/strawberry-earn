@@ -5,23 +5,41 @@ import { SupportMessage, Review, WithdrawalRequest } from './types';
 // Helper to ensure user is logged in
 const ensureUser = async () => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error('Session error:', sessionError.message);
+    }
     if (session?.user) return session.user;
 
-    // Attempt anonymous sign in if no session
+    // Attempt anonymous sign in
     const { data, error } = await supabase.auth.signInAnonymously();
     if (error) {
       console.error('Auth error:', error.message);
-      // Fallback: try to get user again in case of race condition
-      const { data: retryData } = await supabase.auth.getUser();
-      if (retryData?.user) return retryData.user;
-      
-      Alert.alert('Ошибка авторизации', 'Пожалуйста, проверьте интернет-соединение.');
+      Alert.alert('Ошибка авторизации', 'Не удалось войти в систему. Ошибка: ' + error.message);
       return null;
     }
+    
+    // Check if profile exists, if not - create it
+    if (data.user) {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', data.user.id)
+        .single();
+      
+      if (profileError && profileError.code === 'PGRST116') {
+        await supabase.from('profiles').insert({ 
+          id: data.user.id, 
+          balance: 0, 
+          email: data.user.email || `user_${data.user.id.substring(0, 8)}` 
+        });
+      }
+    }
+
     return data.user;
   } catch (e) {
     console.error('ensureUser exception:', e);
+    Alert.alert('Ошибка системы', 'Произошла ошибка при входе: ' + (e as Error).message);
     return null;
   }
 };
@@ -32,11 +50,9 @@ const uploadImage = async (uri: string, folder: string): Promise<string | null> 
     const user = await ensureUser();
     if (!user) return null;
 
-    // Create unique filename
     const ext = uri.split('.').pop() || 'jpg';
     const fileName = `${folder}/${user.id}/${Date.now()}.${ext}`;
     
-    // Convert URI to Blob for better compatibility with Supabase upload
     const response = await fetch(uri);
     const blob = await response.blob();
 
@@ -49,7 +65,7 @@ const uploadImage = async (uri: string, folder: string): Promise<string | null> 
 
     if (error) {
       console.error('Upload error:', error.message);
-      Alert.alert('Ошибка загрузки', 'Не удалось загрузить изображение: ' + error.message);
+      Alert.alert('Ошибка загрузки', 'Не удалось загрузить фото в базу. Ошибка: ' + error.message);
       return null;
     }
 
@@ -60,13 +76,12 @@ const uploadImage = async (uri: string, folder: string): Promise<string | null> 
     return urlData.publicUrl;
   } catch (e) {
     console.error('Upload exception:', e);
-    Alert.alert('Ошибка', 'Произошла ошибка при загрузке фото.');
+    Alert.alert('Ошибка загрузки', 'Ошибка при обработке фото: ' + (e as Error).message);
     return null;
   }
 };
 
 export const MockDB = {
-  // Get User Balance
   getBalance: async (): Promise<number> => {
     try {
       const user = await ensureUser();
@@ -79,17 +94,7 @@ export const MockDB = {
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          // Profile doesn't exist, create it
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({ id: user.id, balance: 0, email: user.email || `user_${user.id.substring(0,5)}` })
-            .select()
-            .single();
-          
-          if (createError) console.error('Create profile error:', createError.message);
-          return newProfile?.balance || 0;
-        }
+        if (error.code === 'PGRST116') return 0;
         console.error('Get balance error:', error.message);
         return 0;
       }
@@ -100,39 +105,34 @@ export const MockDB = {
     }
   },
 
-  // Task Completion
   completeTask: async (taskId: string, reward: number): Promise<boolean> => {
     try {
       const user = await ensureUser();
       if (!user) return false;
 
-      // Special handling for subscription
       if (taskId === 'subscribe_channel') {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('has_subscribed')
           .eq('id', user.id)
           .single();
           
         if (profile?.has_subscribed) {
-          Alert.alert('Инфо', 'Вы уже получили награду за это задание.');
+          Alert.alert('Инфо', 'Вы уже получили награду за подписку.');
           return false; 
         }
         
-        // Update profile status
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ has_subscribed: true })
           .eq('id', user.id);
 
         if (updateError) {
-          console.error('Update sub error:', updateError.message);
-          Alert.alert('Ошибка', 'Не удалось обновить статус подписки.');
+          Alert.alert('Ошибка', 'Не удалось обновить статус подписки в базе: ' + updateError.message);
           return false;
         }
       }
 
-      // Add balance using RPC or manual update
       const currentBalance = await MockDB.getBalance();
       const { error: balError } = await supabase
         .from('profiles')
@@ -140,18 +140,17 @@ export const MockDB = {
         .eq('id', user.id);
 
       if (balError) {
-        Alert.alert('Ошибка', 'Не удалось начислить награду.');
+        Alert.alert('Ошибка', 'Не удалось начислить награду в базу: ' + balError.message);
         return false;
       }
 
       return true;
     } catch (e) {
-      console.error('completeTask exception:', e);
+      Alert.alert('Ошибка', 'Ошибка выполнения задания: ' + (e as Error).message);
       return false;
     }
   },
 
-  // Check Task Status
   checkTaskStatus: async (taskId: string): Promise<boolean> => {
     try {
       const user = await ensureUser();
@@ -171,7 +170,6 @@ export const MockDB = {
     }
   },
 
-  // Reviews: Get All
   getReviews: async (): Promise<Review[]> => {
     try {
       const { data, error } = await supabase
@@ -196,7 +194,6 @@ export const MockDB = {
     }
   },
 
-  // Reviews: Add
   addReview: async (content: string, rating: number): Promise<boolean> => {
     try {
       const user = await ensureUser();
@@ -206,24 +203,22 @@ export const MockDB = {
         .from('reviews')
         .insert({
           user_id: user.id,
-          username: user.email?.split('@')[0] || `User_${user.id.substring(0,4)}`,
+          username: user.email?.split('@')[0] || `User_${user.id.substring(0, 5)}`,
           content,
           rating
         });
 
       if (error) {
-        console.error('Add review error:', error.message);
-        Alert.alert('Ошибка', 'Не удалось отправить отзыв: ' + error.message);
+        Alert.alert('Ошибка отзыва', 'Не удалось отправить отзыв в базу: ' + error.message);
         return false;
       }
       return true;
     } catch (e) {
-      Alert.alert('Ошибка', 'Произошла системная ошибка при отправке отзыва.');
+      Alert.alert('Ошибка отзыва', 'Системная ошибка: ' + (e as Error).message);
       return false;
     }
   },
 
-  // Support: Get My Messages
   getSupportMessages: async (): Promise<SupportMessage[]> => {
     try {
       const user = await ensureUser();
@@ -235,14 +230,16 @@ export const MockDB = {
         .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
-      if (error) return [];
+      if (error) {
+        console.error('Fetch support error:', error.message);
+        return [];
+      }
       return (data || []).map(item => ({ ...item, created_at: new Date(item.created_at).getTime() }));
     } catch (e) {
       return [];
     }
   },
 
-  // Support: Send Message (User)
   sendSupportMessage: async (content: string, imageUri?: string): Promise<boolean> => {
     try {
       const user = await ensureUser();
@@ -251,7 +248,7 @@ export const MockDB = {
       let imageUrl = null;
       if (imageUri) {
         imageUrl = await uploadImage(imageUri, 'support');
-        if (!imageUrl) return false; // uploadImage already alerts
+        if (!imageUrl) return false; 
       }
 
       const { error } = await supabase
@@ -264,16 +261,16 @@ export const MockDB = {
         });
 
       if (error) {
-        Alert.alert('Ошибка', 'Не удалось отправить сообщение: ' + error.message);
+        Alert.alert('Ошибка поддержки', 'Не удалось отправить сообщение в базу: ' + error.message);
         return false;
       }
       return true;
     } catch (e) {
+      Alert.alert('Ошибка поддержки', 'Системная ошибка: ' + (e as Error).message);
       return false;
     }
   },
 
-  // Admin Support
   getSupportUsers: async () => {
     const { data } = await supabase.from('support_messages').select('*').order('created_at', { ascending: false });
     const usersMap = new Map();
@@ -295,7 +292,6 @@ export const MockDB = {
     return !error;
   },
 
-  // Balance Management
   addBalance: async (amount: number): Promise<number> => {
     try {
       const user = await ensureUser();
@@ -308,7 +304,6 @@ export const MockDB = {
     }
   },
 
-  // Withdrawals
   createWithdrawal: async (amount: number, screenshotUri: string, skinName: string): Promise<boolean> => {
     try {
       const user = await ensureUser();

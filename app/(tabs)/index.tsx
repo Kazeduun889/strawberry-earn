@@ -24,8 +24,8 @@ export default function EarnScreen() {
   };
 
   const handleAdReward = async () => {
-    // Random reward between 0.4 and 0.8
-    const reward = parseFloat((Math.random() * (0.8 - 0.4) + 0.4).toFixed(2));
+    // Random reward between 1.0 and 1.5
+    const reward = parseFloat((Math.random() * (1.5 - 1.0) + 1.0).toFixed(2));
     await MockDB.addBalance(reward);
     const newBal = await MockDB.getBalance();
     setPoints(newBal);
