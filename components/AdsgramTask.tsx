@@ -30,38 +30,18 @@ const safeAlert = (title: string, msg?: string) => {
 };
 
 export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError, children }) => {
-  const [isScriptLoaded, setIsScriptLoaded] = React.useState(!!window.Adsgram);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
-
   const injectScript = useCallback(() => {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web' || window.Adsgram) return;
     
-    console.log('Adsgram: Injecting script...');
-    setLoadError(null);
-    
+    console.log('Adsgram: Silent injection...');
     const scriptId = 'adsgram-sdk-script';
     const existingScript = document.getElementById(scriptId);
-    if (existingScript) {
-      existingScript.remove();
-    }
+    if (existingScript) existingScript.remove();
 
     const script = document.createElement('script');
     script.id = scriptId;
-    script.src = `https://adsgram.ai/js/adsgram.js?v=${Date.now()}`; // Add timestamp to bypass cache
+    script.src = `https://adsgram.ai/js/adsgram.js`;
     script.async = true;
-    
-    script.onload = () => {
-      console.log('Adsgram: SDK loaded successfully');
-      setIsScriptLoaded(true);
-      setLoadError(null);
-    };
-    
-    script.onerror = (e) => {
-      console.error('Adsgram: SDK load failed', e);
-      setIsScriptLoaded(false);
-      setLoadError('Скрипт заблокирован (AdBlock/DNS)');
-    };
-    
     document.head.appendChild(script);
   }, []);
 
@@ -74,27 +54,29 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
     console.log('Adsgram click, blockId:', blockId);
     
     if (Platform.OS === 'web') {
+      // Try to re-inject if missing
+      if (!window.Adsgram) {
+        injectScript();
+        // Wait a tiny bit for script to potentially load
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
       if (window.Adsgram) {
         const AdController = window.Adsgram.init({ blockId });
         try {
           await AdController.show();
-          console.log('Ad shown successfully');
           onReward();
         } catch (error: any) {
           console.error('Adsgram error:', error);
-          
           if (error && error.error === 'ad_not_shown') {
             safeAlert('Инфо', 'Реклама не была досмотрена до конца.');
           } else {
-            const errorMsg = error?.description || error?.message || 'Неизвестная ошибка';
             if (onError) onError(error);
-            else safeAlert('Ошибка рекламы', `Ошибка: ${errorMsg}. Попробуйте позже.`);
+            else safeAlert('Ошибка рекламы', 'Реклама временно недоступна. Попробуйте нажать еще раз через пару секунд.');
           }
         }
       } else {
-        console.error('Adsgram library not found on window');
-        injectScript(); // Try to re-inject
-        safeAlert('Ошибка', 'Рекламный сервис всё ещё не загружен. Попробуйте нажать ещё раз через 5 секунд. Если не поможет — выключите AdBlock или смените интернет.');
+        safeAlert('Ошибка', 'Рекламный сервис загружается. Попробуйте нажать еще раз через пару секунд.');
       }
     } else {
       safeAlert('Инфо', 'Реклама доступна только внутри Telegram.');
@@ -102,23 +84,14 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
   }, [blockId, onReward, onError, injectScript]);
 
   return (
-    <View>
-      <TouchableOpacity style={styles.button} onPress={showAd} activeOpacity={0.7}>
-        {children || (
-          <>
-            <Text style={styles.text}>Смотреть рекламу</Text>
-            <Text style={styles.reward}>+1.0 - 1.5 G</Text>
-          </>
-        )}
-      </TouchableOpacity>
-      {!isScriptLoaded && (
-        <TouchableOpacity onPress={injectScript} style={{ marginTop: -5, marginBottom: 10, padding: 5 }}>
-          <Text style={{ color: 'red', fontSize: 10, textAlign: 'center' }}>
-            ⚠️ Реклама не загружена. Нажмите сюда, чтобы попробовать снова.
-          </Text>
-        </TouchableOpacity>
+    <TouchableOpacity style={styles.button} onPress={showAd} activeOpacity={0.7}>
+      {children || (
+        <>
+          <Text style={styles.text}>Смотреть рекламу</Text>
+          <Text style={styles.reward}>+1.0 - 1.5 G</Text>
+        </>
       )}
-    </View>
+    </TouchableOpacity>
   );
 };
 
