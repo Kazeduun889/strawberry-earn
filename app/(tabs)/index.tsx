@@ -47,7 +47,8 @@ export default function EarnScreen() {
     
     // Simulate smart verification (delay)
     setTimeout(async () => {
-      const reward = 50.00;
+      // Updated reward: Random between 1.0 and 1.5
+      const reward = parseFloat((Math.random() * (1.5 - 1.0) + 1.0).toFixed(2));
       const success = await MockDB.completeTask('subscribe_channel', reward);
       
       setIsCheckingSub(false);
@@ -87,7 +88,7 @@ export default function EarnScreen() {
         <View style={styles.taskCard}>
           <View style={{flex: 1}}>
             <Text style={styles.taskTitle}>Подписаться на канал</Text>
-            <Text style={styles.taskReward}>+50.00 G</Text>
+            <Text style={styles.taskReward}>+1.0 - 1.5 G</Text>
           </View>
           
           {!hasClickedSub ? (
