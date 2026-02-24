@@ -157,43 +157,31 @@ export const MockDB = {
         return false;
       }
 
-      console.log(`[Task] Starting: ${taskId}, reward: ${reward}, UID: ${user.id}`);
+      console.log(`[Task] Starting: ${taskId}, reward: ${reward}`);
 
       if (taskId === 'subscribe_channel') {
         const currentBal = await MockDB.getBalance();
         const newBalance = currentBal + reward;
 
-        // CRITICAL: REMOVED 'email' column because it's missing in your DB schema
-        const { error: upsertError } = await supabase
+        // FIXED: Removed the buggy supabase.rpc line
+        const { error: updateError } = await supabase
           .from('profiles')
-          .upsert({ 
-            id: user.id,
+          .update({ 
             has_subscribed: true,
             balance: newBalance
-            // email removed here
-          }, { onConflict: 'id' });
+          })
+          .eq('id', user.id);
 
-        if (upsertError) {
-          console.error('[Task] Upsert error:', upsertError.message);
-          safeAlert('Ошибка БД', 'Не удалось сохранить подписку: ' + upsertError.message);
+        if (updateError) {
+          console.error('[Task] Update error:', updateError.message);
+          safeAlert('Ошибка БД', 'Не удалось сохранить подписку: ' + updateError.message);
           return false;
         }
         
-        // Final verification from DB
-        const { data: verifyData } = await supabase.from('profiles').select('has_subscribed, balance').eq('id', user.id).single();
-        console.log('[Task] Verification result:', verifyData);
-
-        if (verifyData?.has_subscribed && verifyData.balance >= newBalance) {
-           console.log('[Task] SUCCESS verified');
-           return true;
-        } else {
-           console.error('[Task] Verification failed after upsert');
-           safeAlert('Ошибка', 'Данные не сохранились в базе. Попробуйте нажать кнопку еще раз.');
-           return false;
-        }
+        return true;
       }
 
-      // Generic task handling (like ads)
+      // Generic task handling
       const currentBalance = await MockDB.getBalance();
       const { error: balError } = await supabase
         .from('profiles')
@@ -207,7 +195,7 @@ export const MockDB = {
 
       return true;
     } catch (e) {
-      console.error('[Task] Exception:', e);
+      console.error('[Task] Critical exception:', e);
       safeAlert('Критическая ошибка задания', (e as Error).message);
       return false;
     }
