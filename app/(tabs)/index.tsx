@@ -14,6 +14,7 @@ const safeAlert = (title: string, msg?: string) => {
 };
 
 export default function EarnScreen() {
+  console.log('EarnScreen Rendering...');
   const router = useRouter();
   const [points, setPoints] = useState(0);
   const [isCheckingSub, setIsCheckingSub] = useState(false);
@@ -149,7 +150,7 @@ export default function EarnScreen() {
       </TouchableOpacity>
 
       {/* Version Indicator for Debugging */}
-      <Text style={styles.versionText}>Версия: 1.2.4 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
+      <Text style={styles.versionText}>Версия: 1.2.5 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
       <Text style={[styles.versionText, { marginTop: 5, color: 'orange' }]}>Status: {debugStatus}</Text>
 
       <View style={{ height: 40 }} />
