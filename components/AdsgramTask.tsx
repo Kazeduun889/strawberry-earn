@@ -66,25 +66,22 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
       }
 
       const AdController = window.Adsgram.init({ blockId });
-        try {
-          await AdController.show();
-          onReward();
-        } catch (error: any) {
-          console.error('Detailed Adsgram error object:', JSON.stringify(error));
-          
-          if (error && error.error === 'ad_not_shown') {
-            safeAlert('Инфо', 'Реклама не была досмотрена до конца.');
-          } else if (error && error.error === 'no_ads') {
-            safeAlert('Ошибка', 'В данный момент рекламы нет. Попробуйте через пару минут.');
-          } else {
-            const errorType = error?.error || 'Unknown';
-            const errorDesc = error?.description || 'No description';
-            if (onError) onError(error);
-            else safeAlert('Ошибка рекламы', `Тип: ${errorType}\nОписание: ${errorDesc}\n\nПопробуйте нажать еще раз.`);
-          }
+      try {
+        await AdController.show();
+        onReward();
+      } catch (error: any) {
+        console.error('Detailed Adsgram error object:', JSON.stringify(error));
+        
+        if (error && error.error === 'ad_not_shown') {
+          safeAlert('Инфо', 'Реклама не была досмотрена до конца.');
+        } else if (error && error.error === 'no_ads') {
+          safeAlert('Ошибка', 'В данный момент рекламы нет. Попробуйте через пару минут.');
+        } else {
+          const errorType = error?.error || 'Unknown';
+          const errorDesc = error?.description || 'No description';
+          if (onError) onError(error);
+          else safeAlert('Ошибка рекламы', `Тип: ${errorType}\nОписание: ${errorDesc}\n\nПопробуйте нажать еще раз.`);
         }
-      } else {
-        safeAlert('Ошибка', 'SDK рекламы не отвечает. Если у вас включен AdBlock или VPN, выключите их и перезапустите приложение.');
       }
     } else {
       safeAlert('Инфо', 'Реклама доступна только внутри Telegram.');
