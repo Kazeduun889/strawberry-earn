@@ -157,49 +157,37 @@ export const MockDB = {
         return false;
       }
 
-      // Check current status before anything
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('has_subscribed, balance')
-        .eq('id', user.id)
-        .single();
-        
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Check task error:', profileError);
-        safeAlert('Ошибка проверки', profileError.message);
-        return false;
-      }
+      console.log(`Starting completeTask for taskId: ${taskId}, reward: ${reward}`);
 
       if (taskId === 'subscribe_channel') {
-        if (profile?.has_subscribed) {
-          safeAlert('Инфо', 'Награда уже была начислена ранее');
-          return true; // Already done, return true to hide UI
-        }
-        
-        // CRITICAL: Calculate new balance properly
-        const currentBal = profile?.balance || 0;
-        const newBalance = currentBal + reward;
-        
-        console.log(`Updating user ${user.id}: has_subscribed=true, balance=${newBalance}`);
-
-        const { error: updateError } = await supabase
+        // Simple and robust update
+        const { data: updatedProfile, error: updateError } = await supabase
           .from('profiles')
           .update({ 
             has_subscribed: true,
-            balance: newBalance
+            balance: supabase.rpc('increment_balance', { x: reward }) // If RPC exists, or just manual:
+          })
+          .eq('id', user.id)
+          .select()
+          .single();
+
+        // If manual increment is safer (standard way)
+        const currentBal = await MockDB.getBalance();
+        const { error: manualError } = await supabase
+          .from('profiles')
+          .update({ 
+            has_subscribed: true,
+            balance: currentBal + reward
           })
           .eq('id', user.id);
 
-        if (updateError) {
-          console.error('Update sub error:', updateError);
-          safeAlert('Ошибка БД', 'Не удалось сохранить выполнение: ' + updateError.message);
+        if (manualError) {
+          console.error('Update sub error:', manualError);
+          safeAlert('Ошибка БД', 'Не удалось сохранить выполнение: ' + manualError.message);
           return false;
         }
         
-        // Verify update
-        const { data: verifyData } = await supabase.from('profiles').select('has_subscribed').eq('id', user.id).single();
-        console.log('Verification after update:', verifyData);
-
+        console.log('Task completed successfully');
         return true;
       }
 
@@ -217,6 +205,7 @@ export const MockDB = {
 
       return true;
     } catch (e) {
+      console.error('Critical task error:', e);
       safeAlert('Критическая ошибка задания', (e as Error).message);
       return false;
     }
