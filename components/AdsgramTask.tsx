@@ -20,33 +20,42 @@ declare global {
 
 export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError, children }) => {
   const showAd = useCallback(async () => {
+    console.log('Adsgram click, blockId:', blockId);
+    
     if (Platform.OS === 'web') {
       if (window.Adsgram) {
-        const AdController = window.Adsgram.init({ blockId, debug: true, debugBannerType: 'FullscreenMedia' });
+        // Remove debug: true for production stability
+        const AdController = window.Adsgram.init({ blockId });
         try {
           await AdController.show();
+          console.log('Ad shown successfully');
           onReward();
-        } catch (error) {
+        } catch (error: any) {
           console.error('Adsgram error:', error);
-          if (onError) onError(error);
-          else Alert.alert('Ошибка', 'Не удалось показать рекламу');
+          
+          // Handle specific "Ad not shown" error vs real error
+          if (error && error.error === 'ad_not_shown') {
+            Alert.alert('Инфо', 'Реклама не была досмотрена до конца.');
+          } else {
+            if (onError) onError(error);
+            else Alert.alert('Ошибка', 'Реклама временно недоступна. Попробуйте позже.');
+          }
         }
       } else {
-        Alert.alert('Ошибка', 'Библиотека рекламы не загружена');
+        console.error('Adsgram library not found on window');
+        Alert.alert('Ошибка', 'Рекламный сервис не загружен. Перезагрузите приложение.');
       }
     } else {
-      Alert.alert('Инфо', 'Реклама доступна только в Telegram Mini App');
-      // For testing on mobile native, we might just grant reward
-      // onReward(); 
+      Alert.alert('Инфо', 'Реклама доступна только внутри Telegram.');
     }
   }, [blockId, onReward, onError]);
 
   return (
-    <TouchableOpacity style={styles.button} onPress={showAd}>
+    <TouchableOpacity style={styles.button} onPress={showAd} activeOpacity={0.7}>
       {children || (
         <>
           <Text style={styles.text}>Смотреть рекламу</Text>
-          <Text style={styles.reward}>0.4 - 0.8 G</Text>
+          <Text style={styles.reward}>+1.0 - 1.5 G</Text>
         </>
       )}
     </TouchableOpacity>

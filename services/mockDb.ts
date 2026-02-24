@@ -6,40 +6,43 @@ import { SupportMessage, Review, WithdrawalRequest } from './types';
 const ensureUser = async () => {
   try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (session?.user) {
+      console.log('Session active for user:', session.user.id);
+      return session.user;
+    }
+
     if (sessionError) {
       console.error('Session error:', sessionError.message);
     }
-    if (session?.user) return session.user;
 
-    // Attempt anonymous sign in
+    console.log('No session, attempting anonymous sign in...');
     const { data, error } = await supabase.auth.signInAnonymously();
+    
     if (error) {
-      console.error('Auth error:', error.message);
-      Alert.alert('Ошибка авторизации', 'Не удалось войти в систему. Ошибка: ' + error.message);
+      console.error('Auth error details:', error);
+      Alert.alert('Ошибка авторизации', 'Не удалось войти в систему. Пожалуйста, закройте приложение и откройте его снова. Текст: ' + error.message);
       return null;
     }
     
-    // Check if profile exists, if not - create it
+    console.log('Anonymous sign in success:', data.user?.id);
+    
+    // Create profile if it doesn't exist
     if (data.user) {
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .single();
+      const { error: profileError } = await supabase.from('profiles').upsert({ 
+        id: data.user.id, 
+        balance: 0,
+        email: data.user.email || `user_${data.user.id.substring(0, 8)}`
+      }, { onConflict: 'id' });
       
-      if (profileError && profileError.code === 'PGRST116') {
-        await supabase.from('profiles').insert({ 
-          id: data.user.id, 
-          balance: 0, 
-          email: data.user.email || `user_${data.user.id.substring(0, 8)}` 
-        });
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
       }
     }
 
     return data.user;
   } catch (e) {
     console.error('ensureUser exception:', e);
-    Alert.alert('Ошибка системы', 'Произошла ошибка при входе: ' + (e as Error).message);
+    Alert.alert('Ошибка системы', 'Произошла критическая ошибка при входе. Попробуйте позже.');
     return null;
   }
 };
