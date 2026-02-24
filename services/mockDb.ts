@@ -22,12 +22,42 @@ const ensureUser = async () => {
       console.error('Session error:', sessionError.message);
     }
 
+    // Attempt anonymous sign in
     const { data, error } = await supabase.auth.signInAnonymously();
     
     if (error) {
-      console.error('Auth error details:', error);
-      safeAlert('Ошибка авторизации', 'Не удалось войти (Анонимный вход отключен?): ' + error.message);
-      return null;
+      console.error('Auth error (Anonymous failed):', error.message);
+
+      // If anonymous is disabled, we MUST use a fallback user immediately
+      // This happens if the user hasn't enabled "Allow anonymous sign-ins" in Supabase Dashboard
+      const fallbackEmail = `user_fixed@strawberry.com`;
+      const fallbackPassword = 'password_fixed_123';
+
+      console.log('Trying fallback login/signup...');
+      
+      // Try to sign in first
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: fallbackEmail,
+        password: fallbackPassword,
+      });
+
+      if (!signInError && signInData.user) {
+        return signInData.user;
+      }
+
+      // If sign in fails, try to sign up
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: fallbackEmail,
+        password: fallbackPassword,
+      });
+
+      if (signUpError) {
+        console.error('All auth methods failed:', signUpError.message);
+        safeAlert('Ошибка Supabase', 'У вас в панели Supabase ОТКЛЮЧЕНА авторизация. Перейдите в Authentication -> Providers и ВКЛЮЧИТЕ "Anonymous" или "Email". Ошибка: ' + error.message);
+        return null;
+      }
+
+      return signUpData.user;
     }
     
     // Create profile if it doesn't exist

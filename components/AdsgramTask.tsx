@@ -1,22 +1,24 @@
 import React, { useEffect, useCallback } from 'react';
-import { TouchableOpacity, Text, StyleSheet, Alert, Platform } from 'react-native';
+import React, { useCallback } from 'react';
+import { TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 
 interface AdsgramProps {
   blockId: string;
   onReward: () => void;
-  onError?: (err: any) => void;
+  onError?: (error: any) => void;
   children?: React.ReactNode;
 }
 
-declare global {
-  interface Window {
-    Adsgram?: {
-      init: (params: { blockId: string; debug?: boolean; debugBannerType?: 'FullscreenMedia' }) => {
-        show: () => Promise<void>;
-      };
-    };
+// Helper for Web Alerts
+const safeAlert = (title: string, msg?: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}: ${msg}`);
+  } else {
+    // In components we don't always have Alert from react-native here, 
+    // but we can import it or use console.error
+    console.error(title, msg);
   }
-}
+};
 
 export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError, children }) => {
   const showAd = useCallback(async () => {
@@ -35,18 +37,18 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
           
           // Handle specific "Ad not shown" error vs real error
           if (error && error.error === 'ad_not_shown') {
-            Alert.alert('Инфо', 'Реклама не была досмотрена до конца.');
+            safeAlert('Инфо', 'Реклама не была досмотрена до конца.');
           } else {
             if (onError) onError(error);
-            else Alert.alert('Ошибка', 'Реклама временно недоступна. Попробуйте позже.');
+            else safeAlert('Ошибка', 'Реклама временно недоступна. Попробуйте позже.');
           }
         }
       } else {
         console.error('Adsgram library not found on window');
-        Alert.alert('Ошибка', 'Рекламный сервис не загружен. Перезагрузите приложение.');
+        safeAlert('Ошибка', 'Рекламный сервис не загружен. Если у вас включен AdBlock — выключите его.');
       }
     } else {
-      Alert.alert('Инфо', 'Реклама доступна только внутри Telegram.');
+      safeAlert('Инфо', 'Реклама доступна только внутри Telegram.');
     }
   }, [blockId, onReward, onError]);
 
