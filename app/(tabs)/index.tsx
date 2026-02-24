@@ -1,20 +1,35 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking, ActivityIndicator, Platform } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { AdsgramTask } from '../../components/AdsgramTask';
 import { MockDB } from '../../services/mockDb';
+
+// Helper for Web Alerts
+const safeAlert = (title: string, msg?: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}: ${msg}`);
+  } else {
+    Alert.alert(title, msg);
+  }
+};
 
 export default function EarnScreen() {
   const router = useRouter();
   const [points, setPoints] = useState(0);
   const [isCheckingSub, setIsCheckingSub] = useState(false);
   const [hasClickedSub, setHasClickedSub] = useState(false);
+  const [debugStatus, setDebugStatus] = useState('Checking connection...');
 
   const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
     // Load initial balance
-    MockDB.getBalance().then(setPoints);
+    MockDB.getBalance().then((bal) => {
+      setPoints(bal);
+      setDebugStatus('DB Connected. Balance loaded.');
+    }).catch(e => {
+      setDebugStatus('DB Error: ' + e.message);
+    });
     checkSubscriptionStatus();
   }, []);
 
@@ -31,20 +46,24 @@ export default function EarnScreen() {
     if (success) {
       const newBal = await MockDB.getBalance();
       setPoints(newBal);
-      Alert.alert('Успех', `Реклама просмотрена! +${reward} G`);
+      safeAlert('Успех', `Реклама просмотрена! +${reward} G`);
     } else {
-      Alert.alert('Ошибка', 'Не удалось начислить награду за рекламу');
+      safeAlert('Ошибка', 'Не удалось начислить награду за рекламу');
     }
   };
 
   const handleSubscribe = async () => {
-    Linking.openURL('https://t.me/officialWizzi');
+    if (Platform.OS === 'web') {
+      window.open('https://t.me/officialWizzi', '_blank');
+    } else {
+      Linking.openURL('https://t.me/officialWizzi');
+    }
     setHasClickedSub(true);
   };
 
   const handleCheckSubscription = async () => {
     if (!hasClickedSub) {
-      Alert.alert('Ошибка', 'Сначала подпишитесь на канал!');
+      safeAlert('Ошибка', 'Сначала подпишитесь на канал!');
       return;
     }
 
@@ -63,21 +82,21 @@ export default function EarnScreen() {
         if (success) {
           const newBal = await MockDB.getBalance();
           setPoints(newBal);
-          Alert.alert('Успех', `Подписка подтверждена! +${reward} G`);
+          safeAlert('Успех', `Подписка подтверждена! +${reward} G`);
           setIsSubscribed(true); // Mark as subscribed
         } else {
           // Double check if it was already done
           const isDone = await MockDB.checkTaskStatus('subscribe_channel');
           if (isDone) {
              setIsSubscribed(true);
-             Alert.alert('Инфо', 'Вы уже получили награду за это задание');
+             safeAlert('Инфо', 'Вы уже получили награду за это задание');
           } else {
-             Alert.alert('Ошибка', 'Не удалось проверить подписку. Попробуйте еще раз.');
+             safeAlert('Ошибка', 'Не удалось проверить подписку. Попробуйте еще раз.');
           }
         }
       } catch (err) {
         setIsCheckingSub(false);
-        Alert.alert('Ошибка проверки', (err as Error).message);
+        safeAlert('Ошибка проверки', (err as Error).message);
       }
     }, 3000); // 3 seconds delay for "verification"
   };
@@ -128,7 +147,8 @@ export default function EarnScreen() {
       </TouchableOpacity>
 
       {/* Version Indicator for Debugging */}
-      <Text style={styles.versionText}>Версия: 1.0.7 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
+      <Text style={styles.versionText}>Версия: 1.0.8 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
+      <Text style={[styles.versionText, { marginTop: 5, color: 'orange' }]}>Status: {debugStatus}</Text>
 
       <View style={{ height: 40 }} />
     </ScrollView>

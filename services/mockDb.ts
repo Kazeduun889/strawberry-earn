@@ -2,12 +2,19 @@ import { supabase } from './supabase';
 import { Alert, Platform } from 'react-native';
 import { SupportMessage, Review, WithdrawalRequest } from './types';
 
+const safeAlert = (title: string, message?: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}: ${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+
 // Helper to ensure user is logged in
 const ensureUser = async () => {
   try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (session?.user) {
-      console.log('Session active for user:', session.user.id);
       return session.user;
     }
 
@@ -15,16 +22,13 @@ const ensureUser = async () => {
       console.error('Session error:', sessionError.message);
     }
 
-    console.log('No session, attempting anonymous sign in...');
     const { data, error } = await supabase.auth.signInAnonymously();
     
     if (error) {
       console.error('Auth error details:', error);
-      Alert.alert('Ошибка авторизации', 'Не удалось войти в систему. Пожалуйста, закройте приложение и откройте его снова. Текст: ' + error.message);
+      safeAlert('Ошибка авторизации', 'Не удалось войти (Анонимный вход отключен?): ' + error.message);
       return null;
     }
-    
-    console.log('Anonymous sign in success:', data.user?.id);
     
     // Create profile if it doesn't exist
     if (data.user) {
@@ -42,7 +46,7 @@ const ensureUser = async () => {
     return data.user;
   } catch (e) {
     console.error('ensureUser exception:', e);
-    Alert.alert('Ошибка системы', 'Произошла критическая ошибка при входе. Попробуйте позже.');
+    safeAlert('Критическая ошибка', 'Ошибка входа: ' + (e as Error).message);
     return null;
   }
 };
@@ -77,7 +81,7 @@ const uploadImage = async (uri: string, folder: string): Promise<string | null> 
 
     if (error) {
       console.error('Detailed Upload error:', error);
-      Alert.alert('Ошибка загрузки', `Не удалось отправить файл: ${error.message} (Код: ${error.name})`);
+      safeAlert('Ошибка загрузки', `Не удалось отправить файл: ${error.message}`);
       return null;
     }
 
@@ -88,7 +92,7 @@ const uploadImage = async (uri: string, folder: string): Promise<string | null> 
     return urlData.publicUrl;
   } catch (e) {
     console.error('Upload exception:', e);
-    Alert.alert('Критическая ошибка загрузки', (e as Error).message);
+    safeAlert('Критическая ошибка загрузки', (e as Error).message);
     return null;
   }
 };
@@ -121,7 +125,7 @@ export const MockDB = {
     try {
       const user = await ensureUser();
       if (!user) {
-        Alert.alert('Ошибка', 'Не удалось определить пользователя');
+        safeAlert('Ошибка', 'Не удалось определить пользователя. Попробуйте еще раз.');
         return false;
       }
 
@@ -134,12 +138,12 @@ export const MockDB = {
           
         if (profileError && profileError.code !== 'PGRST116') {
           console.error('Check task error:', profileError);
-          Alert.alert('Ошибка проверки', profileError.message);
+          safeAlert('Ошибка проверки', profileError.message);
           return false;
         }
 
         if (profile?.has_subscribed) {
-          Alert.alert('Инфо', 'Награда уже была начислена ранее');
+          safeAlert('Инфо', 'Награда уже была начислена ранее');
           return false; 
         }
         
@@ -149,7 +153,7 @@ export const MockDB = {
           .eq('id', user.id);
 
         if (updateError) {
-          Alert.alert('Ошибка БД', 'Не удалось обновить статус подписки: ' + updateError.message);
+          safeAlert('Ошибка БД', 'Не удалось обновить статус подписки: ' + updateError.message);
           return false;
         }
       }
@@ -162,13 +166,13 @@ export const MockDB = {
         .eq('id', user.id);
 
       if (balError) {
-        Alert.alert('Ошибка БД', 'Не удалось начислить баланс: ' + balError.message);
+        safeAlert('Ошибка БД', 'Не удалось начислить баланс: ' + balError.message);
         return false;
       }
 
       return true;
     } catch (e) {
-      Alert.alert('Критическая ошибка задания', (e as Error).message);
+      safeAlert('Критическая ошибка задания', (e as Error).message);
       return false;
     }
   },
@@ -219,7 +223,10 @@ export const MockDB = {
   addReview: async (content: string, rating: number): Promise<boolean> => {
     try {
       const user = await ensureUser();
-      if (!user) return false;
+      if (!user) {
+        safeAlert('Ошибка', 'Не удалось авторизоваться для отправки отзыва.');
+        return false;
+      }
 
       const { error } = await supabase
         .from('reviews')
@@ -231,12 +238,12 @@ export const MockDB = {
         });
 
       if (error) {
-        Alert.alert('Ошибка отзыва', 'Не удалось отправить отзыв в базу: ' + error.message);
+        safeAlert('Ошибка отзыва', 'Не удалось отправить отзыв в базу: ' + error.message);
         return false;
       }
       return true;
     } catch (e) {
-      Alert.alert('Ошибка отзыва', 'Системная ошибка: ' + (e as Error).message);
+      safeAlert('Ошибка отзыва', 'Системная ошибка: ' + (e as Error).message);
       return false;
     }
   },
@@ -265,15 +272,18 @@ export const MockDB = {
   sendSupportMessage: async (content: string, imageUri?: string): Promise<boolean> => {
     try {
       const user = await ensureUser();
-      if (!user) return false;
+      if (!user) {
+        safeAlert('Ошибка', 'Не удалось авторизоваться для отправки сообщения.');
+        return false;
+      }
 
       let imageUrl = null;
       if (imageUri) {
         imageUrl = await uploadImage(imageUri, 'support');
         if (!imageUrl) {
           console.error('Support image upload failed');
-          // We continue even if image fails, or should we stop? Let's stop to be safe.
-          return false;
+          safeAlert('Внимание', 'Фото не загрузилось, отправляем только текст.');
+          // Continue without image
         }
       }
 
@@ -287,12 +297,12 @@ export const MockDB = {
         });
 
       if (error) {
-        Alert.alert('Ошибка поддержки', 'Не удалось отправить сообщение в базу: ' + error.message);
+        safeAlert('Ошибка поддержки', 'Не удалось отправить сообщение в базу: ' + error.message);
         return false;
       }
       return true;
     } catch (e) {
-      Alert.alert('Ошибка поддержки', 'Системная ошибка: ' + (e as Error).message);
+      safeAlert('Ошибка поддержки', 'Системная ошибка: ' + (e as Error).message);
       return false;
     }
   },
