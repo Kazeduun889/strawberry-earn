@@ -127,6 +127,10 @@ export default function EarnScreen() {
         <Text style={styles.reviewsButtonText}>⭐ Отзывы о приложении</Text>
       </TouchableOpacity>
 
+      {/* Version Indicator for Debugging */}
+      <Text style={styles.versionText}>Версия: 1.0.5 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
+
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
@@ -145,5 +149,6 @@ const styles = StyleSheet.create({
   checkButton: { backgroundColor: '#34C759' },
   actionButtonText: { color: 'white', fontWeight: 'bold' },
   reviewsButton: { marginTop: 20, backgroundColor: 'white', padding: 15, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#ddd' },
-  reviewsButtonText: { fontSize: 16, fontWeight: 'bold', color: '#333' }
+  reviewsButtonText: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  versionText: { textAlign: 'center', color: '#ccc', fontSize: 10, marginTop: 20 }
 });
