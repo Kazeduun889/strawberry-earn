@@ -178,10 +178,12 @@ export const MockDB = {
           return true; // Already done, return true to hide UI
         }
         
-        // UPDATE SUB STATUS AND BALANCE IN ONE GO IF POSSIBLE
-        // But since we don't have a single RPC, let's do them sequentially with error check
-        const newBalance = (profile?.balance || 0) + reward;
+        // CRITICAL: Calculate new balance properly
+        const currentBal = profile?.balance || 0;
+        const newBalance = currentBal + reward;
         
+        console.log(`Updating user ${user.id}: has_subscribed=true, balance=${newBalance}`);
+
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ 
@@ -191,10 +193,15 @@ export const MockDB = {
           .eq('id', user.id);
 
         if (updateError) {
+          console.error('Update sub error:', updateError);
           safeAlert('Ошибка БД', 'Не удалось сохранить выполнение: ' + updateError.message);
           return false;
         }
         
+        // Verify update
+        const { data: verifyData } = await supabase.from('profiles').select('has_subscribed').eq('id', user.id).single();
+        console.log('Verification after update:', verifyData);
+
         return true;
       }
 
