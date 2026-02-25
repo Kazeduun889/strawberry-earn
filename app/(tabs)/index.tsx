@@ -152,8 +152,13 @@ export default function EarnScreen() {
         <Text style={styles.reviewsButtonText}>⭐ Отзывы о приложении</Text>
       </TouchableOpacity>
 
+      {/* Leaderboard Button */}
+      <TouchableOpacity style={[styles.reviewsButton, { marginTop: 10 }]} onPress={() => router.push('/leaderboard')}>
+        <Text style={styles.reviewsButtonText}>🏆 Список лидеров (ТОП-10)</Text>
+      </TouchableOpacity>
+
       {/* Version Indicator for Debugging */}
-      <Text style={styles.versionText}>Версия: 1.5.0 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
+      <Text style={styles.versionText}>Версия: 1.5.1 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
       <Text style={[styles.versionText, { marginTop: 5, color: 'orange' }]}>Status: {debugStatus}</Text>
 
       <View style={{ height: 40 }} />

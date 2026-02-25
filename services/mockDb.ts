@@ -165,10 +165,30 @@ export const MockDB = {
     try {
       const user = await ensureUser();
       if (!user) return false;
-      const { error } = await supabase.from('profiles').update({ nickname: newNickname }).eq('id', user.id);
+      // Using UPSERT here too, just in case profile row is missing nickname column value
+      const { error } = await supabase.from('profiles').upsert({ 
+        id: user.id, 
+        nickname: newNickname 
+      }, { onConflict: 'id' });
       return !error;
     } catch {
       return false;
+    }
+  },
+
+  getLeaderboard: async (): Promise<any[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('nickname, balance')
+        .order('balance', { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.error('Leaderboard error:', e);
+      return [];
     }
   },
 
