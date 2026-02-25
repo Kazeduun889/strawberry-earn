@@ -113,8 +113,11 @@ export default function EarnScreen() {
 
       <Text style={styles.sectionTitle}>Доступные задания</Text>
 
-      {/* Monetag Task */}
-      <MonetagTask zoneId="8923456" onReward={handleAdReward} />
+      {/* Monetag Task - Use your real Direct Link here */}
+      <MonetagTask 
+        adUrl="https://whomeenoal.com/4/8923456" 
+        onReward={handleAdReward} 
+      />
 
       {/* Subscription Task with Smart Verification */}
       {!isSubscribed && (
@@ -150,7 +153,7 @@ export default function EarnScreen() {
       </TouchableOpacity>
 
       {/* Version Indicator for Debugging */}
-      <Text style={styles.versionText}>Версия: 1.4.0 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
+      <Text style={styles.versionText}>Версия: 1.4.1 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
       <Text style={[styles.versionText, { marginTop: 5, color: 'orange' }]}>Status: {debugStatus}</Text>
 
       <View style={{ height: 40 }} />

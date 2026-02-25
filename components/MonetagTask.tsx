@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, Platform, View, ActivityIndicator } from 'react-native';
 
 interface MonetagProps {
-  zoneId: string;
+  adUrl: string; // The Direct Link from Monetag
   onReward: () => void;
   children?: React.ReactNode;
 }
@@ -15,7 +15,7 @@ const safeAlert = (title: string, msg?: string) => {
   }
 };
 
-export const MonetagTask: React.FC<MonetagProps> = ({ zoneId, onReward, children }) => {
+export const MonetagTask: React.FC<MonetagProps> = ({ adUrl, onReward, children }) => {
   const [loading, setLoading] = useState(false);
 
   const showAd = useCallback(async () => {
@@ -23,34 +23,34 @@ export const MonetagTask: React.FC<MonetagProps> = ({ zoneId, onReward, children
     setLoading(true);
 
     if (Platform.OS !== 'web') {
-      safeAlert('Инфо', 'Реклама доступна только в веб-версии Telegram.');
+      safeAlert('Инфо', 'Реклама доступна только в Telegram.');
       setLoading(false);
       return;
     }
 
     try {
-      // Monetag logic usually involves opening a SmartLink or triggering a Tag
-      // For Telegram Mini Apps, the most reliable way is using their SmartLink system
-      // or a Direct Link if you have one.
-      
-      // If you have a specific SmartLink URL from Monetag, we should use it here.
-      // Since we only have a zoneId, we'll simulate the "In-Page Push" or "Vignette" check.
-      
-      console.log('Monetag: Triggering zone', zoneId);
-      
-      // We will use a standard delay to simulate ad loading/viewing
-      // In a real production setup with Monetag, you would use their 'onclick' or 'interstitial' tag.
-      setTimeout(() => {
-        setLoading(false);
-        onReward();
-      }, 3000);
+      // 1. Open the Direct Link in a new tab
+      // This is the most reliable way to earn with Monetag
+      window.open(adUrl, '_blank');
+
+      // 2. Start a countdown to give reward
+      // We give reward after 10 seconds to ensure they saw the ad
+      let timeLeft = 10;
+      const interval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+          clearInterval(interval);
+          setLoading(false);
+          onReward();
+        }
+      }, 1000);
 
     } catch (error) {
       console.error('Monetag error:', error);
-      safeAlert('Ошибка', 'Не удалось загрузить рекламу. Попробуйте позже.');
+      safeAlert('Ошибка', 'Не удалось открыть рекламу.');
       setLoading(false);
     }
-  }, [zoneId, onReward, loading]);
+  }, [adUrl, onReward, loading]);
 
   return (
     <TouchableOpacity 
@@ -61,8 +61,10 @@ export const MonetagTask: React.FC<MonetagProps> = ({ zoneId, onReward, children
     >
       {children || (
         <>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.text}>Смотреть рекламу (Monetag)</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <Text style={styles.text}>
+              {loading ? 'Проверка просмотра...' : 'Смотреть рекламу (Monetag)'}
+            </Text>
             {loading && <ActivityIndicator size="small" color="#007AFF" style={{ marginLeft: 10 }} />}
           </View>
           <Text style={styles.reward}>+1.0 - 1.5 G</Text>
