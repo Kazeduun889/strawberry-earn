@@ -149,6 +149,29 @@ export const MockDB = {
     return user?.id || 'None';
   },
 
+  getNickname: async (): Promise<string> => {
+    try {
+      const user = await ensureUser();
+      if (!user) return 'User';
+      const { data, error } = await supabase.from('profiles').select('nickname').eq('id', user.id).maybeSingle();
+      if (error) return 'User';
+      return data?.nickname || 'User';
+    } catch {
+      return 'User';
+    }
+  },
+
+  updateNickname: async (newNickname: string): Promise<boolean> => {
+    try {
+      const user = await ensureUser();
+      if (!user) return false;
+      const { error } = await supabase.from('profiles').update({ nickname: newNickname }).eq('id', user.id);
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
   completeTask: async (taskId: string, reward: number): Promise<boolean> => {
     try {
       const user = await ensureUser();

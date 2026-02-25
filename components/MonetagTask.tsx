@@ -63,7 +63,7 @@ export const MonetagTask: React.FC<MonetagProps> = ({ adUrl, onReward, children 
         <>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <Text style={styles.text}>
-              {loading ? 'Проверка просмотра...' : 'Смотреть рекламу (Monetag)'}
+              {loading ? 'Проверка просмотра...' : 'Просмотр сайтов'}
             </Text>
             {loading && <ActivityIndicator size="small" color="#007AFF" style={{ marginLeft: 10 }} />}
           </View>
