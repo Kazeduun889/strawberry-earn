@@ -113,9 +113,9 @@ export default function EarnScreen() {
 
       <Text style={styles.sectionTitle}>Доступные задания</Text>
 
-      {/* Monetag Task - Use your real Direct Link here */}
+      {/* Monetag Task - Using your personal Direct Link */}
       <MonetagTask 
-        adUrl="https://whomeenoal.com/4/8923456" 
+        adUrl="https://omg10.com/4/10651070" 
         onReward={handleAdReward} 
       />
 
@@ -153,7 +153,7 @@ export default function EarnScreen() {
       </TouchableOpacity>
 
       {/* Version Indicator for Debugging */}
-      <Text style={styles.versionText}>Версия: 1.4.1 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
+      <Text style={styles.versionText}>Версия: 1.4.2 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
       <Text style={[styles.versionText, { marginTop: 5, color: 'orange' }]}>Status: {debugStatus}</Text>
 
       <View style={{ height: 40 }} />
