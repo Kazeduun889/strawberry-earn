@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking, ActivityIndicator, Platform } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { AdsgramTask } from '../../components/AdsgramTask';
+import { MonetagTask } from '../../components/MonetagTask';
 import { MockDB } from '../../services/mockDb';
 
 // Helper for Web Alerts
@@ -113,8 +113,8 @@ export default function EarnScreen() {
 
       <Text style={styles.sectionTitle}>Доступные задания</Text>
 
-      {/* Adsgram Task with Block ID 23633 */}
-      <AdsgramTask blockId="23633" onReward={handleAdReward} />
+      {/* Monetag Task */}
+      <MonetagTask zoneId="8923456" onReward={handleAdReward} />
 
       {/* Subscription Task with Smart Verification */}
       {!isSubscribed && (
@@ -150,7 +150,7 @@ export default function EarnScreen() {
       </TouchableOpacity>
 
       {/* Version Indicator for Debugging */}
-      <Text style={styles.versionText}>Версия: 1.3.1 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
+      <Text style={styles.versionText}>Версия: 1.4.0 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
       <Text style={[styles.versionText, { marginTop: 5, color: 'orange' }]}>Status: {debugStatus}</Text>
 
       <View style={{ height: 40 }} />
