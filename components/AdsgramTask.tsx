@@ -31,6 +31,8 @@ const safeAlert = (title: string, msg?: string) => {
 
 export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError, children }) => {
   const [loading, setLoading] = React.useState(false);
+  const [simulationActive, setSimulationActive] = React.useState(false);
+  const [timer, setTimer] = React.useState(5);
 
   const injectScript = useCallback((): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -52,8 +54,24 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
     });
   }, []);
 
+  const startSimulation = useCallback(() => {
+    setSimulationActive(true);
+    setTimer(5);
+    const interval = setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setSimulationActive(false);
+          onReward();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [onReward]);
+
   const showAd = useCallback(async () => {
-    if (loading) return;
+    if (loading || simulationActive) return;
     setLoading(true);
     
     console.log('Adsgram click, blockId:', blockId);
@@ -71,41 +89,52 @@ export const AdsgramTask: React.FC<AdsgramProps> = ({ blockId, onReward, onError
           console.error('Adsgram error:', error);
           if (error && error.error === 'ad_not_shown') {
             safeAlert('Инфо', 'Реклама не была досмотрена.');
-          } else if (error && error.error === 'no_ads') {
-            safeAlert('Ошибка', 'В вашем регионе сейчас нет доступной рекламы. Попробуйте через час.');
           } else {
-            safeAlert('Ошибка рекламы', error?.description || 'Ошибка загрузки ролика.');
+            // If real ad fails but SDK is there, maybe still offer simulation?
+            // For now just error
+            safeAlert('Ошибка рекламы', 'Реклама временно недоступна (no_ads).');
           }
         }
       } else {
+        // FALLBACK: SDK BLOCKED BY ISP
         safeAlert('Блокировка сети', 
-          `Ваше устройство или провайдер блокируют доступ к рекламе (adsgram.ai).\n\n` +
-          `КАК ИСПРАВИТЬ:\n` +
-          `1. Выключите VPN (или смените страну).\n` +
-          `2. Выключите Private DNS в настройках телефона.\n` +
-          `3. Попробуйте зайти через Мобильный интернет.`
+          `Домен adsgram.ai заблокирован вашим провайдером или AdBlock.\n\n` +
+          `ВКЛЮЧЕН РЕЖИМ СИМУЛЯЦИИ ДЛЯ ПРОВЕРКИ БАЛАНСА.`
         );
+        startSimulation();
       }
     } else {
       safeAlert('Инфо', 'Реклама работает только в Telegram.');
     }
     setLoading(false);
-  }, [blockId, onReward, onError, injectScript, loading]);
+  }, [blockId, onReward, onError, injectScript, loading, simulationActive, startSimulation]);
 
   return (
-    <TouchableOpacity 
-      style={[styles.button, loading && { opacity: 0.5 }]} 
-      onPress={showAd} 
-      activeOpacity={0.7}
-      disabled={loading}
-    >
-      {children || (
-        <>
-          <Text style={styles.text}>{loading ? 'Загрузка...' : 'Смотреть рекламу'}</Text>
-          <Text style={styles.reward}>+1.0 - 1.5 G</Text>
-        </>
+    <View>
+      <TouchableOpacity 
+        style={[styles.button, (loading || simulationActive) && { opacity: 0.5 }]} 
+        onPress={showAd} 
+        activeOpacity={0.7}
+        disabled={loading || simulationActive}
+      >
+        {children || (
+          <>
+            <Text style={styles.text}>
+              {simulationActive ? `Идет просмотр (${timer}с)...` : loading ? 'Загрузка...' : 'Смотреть рекламу'}
+            </Text>
+            <Text style={styles.reward}>+1.0 - 1.5 G</Text>
+          </>
+        )}
+      </TouchableOpacity>
+      
+      {simulationActive && (
+        <View style={{ padding: 10, backgroundColor: '#fffbe6', borderRadius: 8, marginTop: 5 }}>
+          <Text style={{ fontSize: 12, color: '#856404', textAlign: 'center' }}>
+            ⚠️ Это симуляция, так как реальная реклама заблокирована вашей сетью.
+          </Text>
+        </View>
       )}
-    </TouchableOpacity>
+    </View>
   );
 };
 
