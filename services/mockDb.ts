@@ -192,6 +192,23 @@ export const MockDB = {
     }
   },
 
+  getWithdrawals: async (): Promise<any[]> => {
+    try {
+      const user = await ensureUser();
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('withdrawals')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.error('getWithdrawals error:', e);
+      return [];
+    }
+  },
+
   completeTask: async (taskId: string, reward: number): Promise<boolean> => {
     try {
       const user = await ensureUser();

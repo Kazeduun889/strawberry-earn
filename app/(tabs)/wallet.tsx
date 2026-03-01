@@ -7,10 +7,18 @@ export default function WalletScreen() {
   const [balance, setBalance] = useState(0);
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [telegramId, setTelegramId] = useState<number | null>(null);
 
   useEffect(() => {
     loadBalance();
+    // Get Telegram User ID
+    if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+      setTelegramId((window as any).Telegram.WebApp.initDataUnsafe.user.id);
+    }
   }, []);
+
+  const isAdmin = telegramId === 1562788488 || telegramId === 8565678796;
+  const minWithdraw = isAdmin ? 10 : 1000;
 
   const loadBalance = () => MockDB.getBalance().then(setBalance);
 
@@ -27,8 +35,8 @@ export default function WalletScreen() {
   };
 
   const handleWithdraw = async () => {
-    if (balance < 1000) {
-      Alert.alert('Ошибка', 'Минимальная сумма вывода: 1000 G');
+    if (balance < minWithdraw) {
+      Alert.alert('Ошибка', `Минимальная сумма вывода: ${minWithdraw} G`);
       return;
     }
     if (!screenshot) {
@@ -64,8 +72,8 @@ export default function WalletScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Вывод средств</Text>
         <Text style={styles.instruction}>
-          1. Накопите минимум 1000 G.{'\n'}
-          2. Выставьте скин в Project Evolution за {balance >= 1000 ? balance.toFixed(2) : 'XXXX.XX'} G.{'\n'}
+          1. Накопите минимум {minWithdraw} G.{'\n'}
+          2. Выставьте скин в Project Evolution за {balance >= minWithdraw ? balance.toFixed(2) : 'XXXX.XX'} G.{'\n'}
           3. Загрузите скриншот выставленного скина.
         </Text>
 
@@ -80,9 +88,9 @@ export default function WalletScreen() {
         )}
 
         <TouchableOpacity 
-          style={[styles.withdrawButton, (balance < 1000 || isSubmitting) && styles.disabledButton]} 
+          style={[styles.withdrawButton, (balance < minWithdraw || isSubmitting) && styles.disabledButton]} 
           onPress={handleWithdraw}
-          disabled={balance < 1000 || isSubmitting}
+          disabled={balance < minWithdraw || isSubmitting}
         >
           <Text style={styles.withdrawButtonText}>
             {isSubmitting ? 'Отправка...' : `Вывести ${balance.toFixed(2)} G`}

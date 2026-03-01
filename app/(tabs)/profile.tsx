@@ -90,7 +90,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.menuItem}>
+      <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/history')}>
         <Text style={styles.menuText}>История выплат</Text>
       </TouchableOpacity>
       
@@ -102,8 +102,8 @@ export default function ProfileScreen() {
         </View>
       </TouchableOpacity>
 
-      {/* Show Admin Panel only for specific ID */}
-      {telegramId === 1562788488 && (
+      {/* Show Admin Panel for admins */}
+      {(telegramId === 1562788488 || telegramId === 8565678796) && (
         <TouchableOpacity style={[styles.menuItem, styles.adminButton]} onPress={() => router.push('/admin')}>
           <Text style={[styles.menuText, styles.adminText]}>Админ Панель</Text>
         </TouchableOpacity>

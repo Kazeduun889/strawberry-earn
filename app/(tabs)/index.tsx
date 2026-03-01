@@ -157,9 +157,8 @@ export default function EarnScreen() {
         <Text style={styles.reviewsButtonText}>🏆 Список лидеров (ТОП-10)</Text>
       </TouchableOpacity>
 
-      {/* Version Indicator for Debugging */}
-      <Text style={styles.versionText}>Версия: 1.5.1 (Build: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()})</Text>
-      <Text style={[styles.versionText, { marginTop: 5, color: 'orange' }]}>Status: {debugStatus}</Text>
+      {/* Version Indicator */}
+      <Text style={styles.versionText}>Версия: 1.0.0</Text>
 
       <View style={{ height: 40 }} />
     </ScrollView>
