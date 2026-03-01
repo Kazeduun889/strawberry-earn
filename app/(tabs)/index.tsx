@@ -14,12 +14,10 @@ const safeAlert = (title: string, msg?: string) => {
 };
 
 export default function EarnScreen() {
-  console.log('EarnScreen Rendering...');
   const router = useRouter();
   const [points, setPoints] = useState(0);
   const [isCheckingSub, setIsCheckingSub] = useState(false);
   const [hasClickedSub, setHasClickedSub] = useState(false);
-  const [debugStatus, setDebugStatus] = useState('Checking connection...');
 
   const [isSubscribed, setIsSubscribed] = useState(false);
 
@@ -27,11 +25,8 @@ export default function EarnScreen() {
     // Load initial balance
     MockDB.getBalance().then((bal) => {
       setPoints(bal);
-      MockDB.getCurrentUser().then(uid => {
-        setDebugStatus(`UID: ${uid.substring(0, 8)}... | Bal: ${bal}`);
-      });
     }).catch(e => {
-      setDebugStatus('DB Error: ' + e.message);
+      console.error('DB Error:', e.message);
     });
     checkSubscriptionStatus();
   }, []);
