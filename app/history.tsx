@@ -19,12 +19,15 @@ export default function HistoryScreen() {
     <View style={styles.historyItem}>
       <View style={styles.itemHeader}>
         <Text style={styles.amount}>{item.amount.toFixed(2)} G</Text>
-        <Text style={[styles.status, { color: item.status === 'completed' ? '#34C759' : item.status === 'rejected' ? '#FF3B30' : '#FFCC00' }]}>
-          {item.status === 'completed' ? 'Выполнено' : item.status === 'rejected' ? 'Отклонено' : 'В обработке'}
+        <Text style={[styles.status, { color: item.status === 'approved' ? '#34C759' : item.status === 'rejected' ? '#FF3B30' : '#FFCC00' }]}>
+          {item.status === 'approved' ? 'Выполнено' : item.status === 'rejected' ? 'Отклонено' : 'В обработке'}
         </Text>
       </View>
       <Text style={styles.date}>{new Date(item.created_at).toLocaleString()}</Text>
       <Text style={styles.method}>Метод: {item.method}</Text>
+      {item.status === 'rejected' && item.rejection_reason && (
+        <Text style={styles.reason}>Причина: {item.rejection_reason}</Text>
+      )}
     </View>
   );
 
@@ -64,6 +67,7 @@ const styles = StyleSheet.create({
   amount: { fontSize: 18, fontWeight: 'bold' },
   status: { fontSize: 14, fontWeight: '600' },
   date: { fontSize: 12, color: '#666', marginBottom: 5 },
-  method: { fontSize: 14, color: '#333' },
+  method: { fontSize: 14, color: '#333', marginBottom: 5 },
+  reason: { fontSize: 13, color: '#FF3B30', fontStyle: 'italic', marginTop: 5 },
   empty: { textAlign: 'center', marginTop: 50, color: '#666' }
 });

@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, ScrollView } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { MockDB } from '../../services/mockDb';
 
@@ -9,8 +10,17 @@ export default function WalletScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [telegramId, setTelegramId] = useState<number | null>(null);
 
+  const loadBalance = useCallback(() => {
+    MockDB.getBalance().then(setBalance);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadBalance();
+    }, [loadBalance])
+  );
+
   useEffect(() => {
-    loadBalance();
     // Get Telegram User ID
     if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id) {
       setTelegramId((window as any).Telegram.WebApp.initDataUnsafe.user.id);
@@ -19,8 +29,6 @@ export default function WalletScreen() {
 
   const isAdmin = telegramId === 1562788488 || telegramId === 8565678796;
   const minWithdraw = isAdmin ? 10 : 1000;
-
-  const loadBalance = () => MockDB.getBalance().then(setBalance);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({

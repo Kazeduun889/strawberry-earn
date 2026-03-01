@@ -197,15 +197,31 @@ export const MockDB = {
       const user = await ensureUser();
       if (!user) return [];
       const { data, error } = await supabase
-        .from('withdrawals')
+        .from('withdrawal_requests')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []).map(item => ({
+        id: item.id,
+        amount: item.amount,
+        status: item.status,
+        created_at: item.created_at,
+        method: item.skin_name || 'Project Evolution Skin',
+        rejection_reason: item.rejection_reason
+      }));
     } catch (e) {
       console.error('getWithdrawals error:', e);
       return [];
+    }
+  },
+
+  getNicknameById: async (userId: string): Promise<string> => {
+    try {
+      const { data, error } = await supabase.from('profiles').select('nickname').eq('id', userId).maybeSingle();
+      return data?.nickname || 'User';
+    } catch {
+      return 'User';
     }
   },
 
@@ -443,7 +459,7 @@ export const MockDB = {
 
       const balance = await MockDB.getBalance();
       if (balance < amount) {
-        Alert.alert('Ошибка', 'Недостаточно средств на балансе.');
+        safeAlert('Ошибка', 'Недостаточно средств на балансе.');
         return false;
       }
 
@@ -459,10 +475,11 @@ export const MockDB = {
       });
 
       if (reqError) {
-        Alert.alert('Ошибка', 'Не удалось создать запрос: ' + reqError.message);
+        safeAlert('Ошибка', 'Не удалось создать запрос: ' + reqError.message);
         return false;
       }
 
+      // Deduct balance
       await supabase.from('profiles').update({ balance: balance - amount }).eq('id', user.id);
       return true;
     } catch (e) {
@@ -479,7 +496,8 @@ export const MockDB = {
       screenshotUri: item.screenshot_uri,
       status: item.status,
       createdAt: new Date(item.created_at).getTime(),
-      skinName: item.skin_name
+      skinName: item.skin_name,
+      rejectionReason: item.rejection_reason
     }));
   },
 
@@ -487,14 +505,19 @@ export const MockDB = {
     await supabase.from('withdrawal_requests').update({ status: 'approved' }).eq('id', id);
   },
 
-  rejectRequest: async (id: string) => {
+  rejectRequest: async (id: string, reason?: string) => {
     const { data: request } = await supabase.from('withdrawal_requests').select('*').eq('id', id).single();
     if (request) {
+      // 1. Refund the user
       const { data: profile } = await supabase.from('profiles').select('balance').eq('id', request.user_id).single();
       if (profile) {
         await supabase.from('profiles').update({ balance: profile.balance + request.amount }).eq('id', request.user_id);
       }
-      await supabase.from('withdrawal_requests').update({ status: 'rejected' }).eq('id', id);
+      // 2. Update status and reason
+      await supabase.from('withdrawal_requests').update({ 
+        status: 'rejected',
+        rejection_reason: reason || 'Не указана'
+      }).eq('id', id);
     }
   }
 };
