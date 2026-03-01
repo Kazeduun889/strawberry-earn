@@ -207,7 +207,7 @@ export const MockDB = {
         amount: item.amount,
         status: item.status,
         created_at: item.created_at,
-        method: item.skin_name || 'Project Evolution Skin',
+        method: item.skin_name || item.method || 'Project Evolution Skin',
         rejection_reason: item.rejection_reason
       }));
     } catch (e) {
@@ -452,7 +452,7 @@ export const MockDB = {
     }
   },
 
-  createWithdrawal: async (amount: number, screenshotUri: string, skinName: string): Promise<boolean> => {
+  createWithdrawal: async (amount: number, screenshotUri: string, method: string): Promise<boolean> => {
     try {
       const user = await ensureUser();
       if (!user) return false;
@@ -466,17 +466,33 @@ export const MockDB = {
       const imageUrl = await uploadImage(screenshotUri, 'withdrawals');
       if (!imageUrl) return false;
 
+      // FIXED: Using 'method' instead of 'skin_name' to match typical schema, 
+      // but providing both if needed or checking which one exists.
+      // Based on the error, the user might not have 'skin_name' in Supabase yet.
       const { error: reqError } = await supabase.from('withdrawal_requests').insert({
         user_id: user.id,
         amount,
         screenshot_uri: imageUrl,
         status: 'pending',
-        skin_name: skinName
+        method: method // We will try 'method' first
       });
 
       if (reqError) {
-        safeAlert('Ошибка', 'Не удалось создать запрос: ' + reqError.message);
-        return false;
+        console.error('Insert error (trying method):', reqError.message);
+        
+        // Fallback: try 'skin_name' if 'method' failed (if they have old schema)
+        const { error: fallbackError } = await supabase.from('withdrawal_requests').insert({
+          user_id: user.id,
+          amount,
+          screenshot_uri: imageUrl,
+          status: 'pending',
+          skin_name: method
+        });
+
+        if (fallbackError) {
+          safeAlert('Ошибка', 'Не удалось создать запрос. Пожалуйста, выполните SQL-запрос в Supabase для добавления колонки "method". Ошибка: ' + fallbackError.message);
+          return false;
+        }
       }
 
       // Deduct balance
@@ -496,7 +512,7 @@ export const MockDB = {
       screenshotUri: item.screenshot_uri,
       status: item.status,
       createdAt: new Date(item.created_at).getTime(),
-      skinName: item.skin_name,
+      skinName: item.skin_name || item.method || 'Unknown',
       rejectionReason: item.rejection_reason
     }));
   },
