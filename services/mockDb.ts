@@ -517,23 +517,50 @@ export const MockDB = {
     }));
   },
 
-  approveRequest: async (id: string) => {
-    await supabase.from('withdrawal_requests').update({ status: 'approved' }).eq('id', id);
+  approveRequest: async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('withdrawal_requests')
+        .update({ status: 'approved' })
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Approve error:', error.message);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error('Approve exception:', e);
+      return false;
+    }
   },
 
-  rejectRequest: async (id: string, reason?: string) => {
-    const { data: request } = await supabase.from('withdrawal_requests').select('*').eq('id', id).single();
-    if (request) {
+  rejectRequest: async (id: string, reason?: string): Promise<boolean> => {
+    try {
+      const { data: request, error: fetchError } = await supabase
+        .from('withdrawal_requests')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (fetchError || !request) return false;
+
       // 1. Refund the user
       const { data: profile } = await supabase.from('profiles').select('balance').eq('id', request.user_id).single();
       if (profile) {
         await supabase.from('profiles').update({ balance: profile.balance + request.amount }).eq('id', request.user_id);
       }
+      
       // 2. Update status and reason
-      await supabase.from('withdrawal_requests').update({ 
+      const { error: updateError } = await supabase.from('withdrawal_requests').update({ 
         status: 'rejected',
         rejection_reason: reason || 'Не указана'
       }).eq('id', id);
+
+      return !updateError;
+    } catch (e) {
+      console.error('Reject exception:', e);
+      return false;
     }
   }
 };

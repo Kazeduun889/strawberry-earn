@@ -36,8 +36,12 @@ export default function AdminScreen() {
       {
         text: 'Да, отправил',
         onPress: async () => {
-          await MockDB.approveRequest(id);
-          loadRequests();
+          const success = await MockDB.approveRequest(id);
+          if (success) {
+            loadRequests();
+          } else {
+            Alert.alert('Ошибка', 'Не удалось обновить статус заявки');
+          }
         },
       },
     ]);
@@ -47,8 +51,12 @@ export default function AdminScreen() {
     if (Platform.OS === 'web') {
       const reason = window.prompt('Причина отклонения (необязательно):', 'Неверный скриншот');
       if (reason !== null) {
-        await MockDB.rejectRequest(id, reason);
-        loadRequests();
+        const success = await MockDB.rejectRequest(id, reason);
+        if (success) {
+          loadRequests();
+        } else {
+          window.alert('Ошибка при отклонении заявки');
+        }
       }
     } else {
       Alert.alert('Отмена', 'Отменить заявку и вернуть средства?', [
@@ -57,8 +65,12 @@ export default function AdminScreen() {
           text: 'Да, отменить',
           style: 'destructive',
           onPress: async () => {
-            await MockDB.rejectRequest(id, 'Заявка отклонена администратором');
-            loadRequests();
+            const success = await MockDB.rejectRequest(id, 'Заявка отклонена администратором');
+            if (success) {
+              loadRequests();
+            } else {
+              Alert.alert('Ошибка', 'Не удалось отклонить заявку');
+            }
           },
         },
       ]);
