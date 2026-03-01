@@ -31,31 +31,49 @@ export default function AdminScreen() {
   };
 
   const handleApprove = async (id: string) => {
-    Alert.alert('Подтверждение', 'Вы уверены, что отправили голду?', [
-      { text: 'Отмена', style: 'cancel' },
-      {
-        text: 'Да, отправил',
-        onPress: async () => {
-          const success = await MockDB.approveRequest(id);
-          if (success) {
-            loadRequests();
-          } else {
-            Alert.alert('Ошибка', 'Не удалось обновить статус заявки');
-          }
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Вы уверены, что отправили голду?');
+      if (confirmed) {
+        setLoading(true);
+        const success = await MockDB.approveRequest(id);
+        if (success) {
+          loadRequests();
+        } else {
+          window.alert('Ошибка: Не удалось обновить статус заявки. Проверьте консоль.');
+          setLoading(false);
+        }
+      }
+    } else {
+      Alert.alert('Подтверждение', 'Вы уверены, что отправили голду?', [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Да, отправил',
+          onPress: async () => {
+            setLoading(true);
+            const success = await MockDB.approveRequest(id);
+            if (success) {
+              loadRequests();
+            } else {
+              Alert.alert('Ошибка', 'Не удалось обновить статус заявки');
+              setLoading(false);
+            }
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   const handleReject = async (id: string) => {
     if (Platform.OS === 'web') {
       const reason = window.prompt('Причина отклонения (необязательно):', 'Неверный скриншот');
       if (reason !== null) {
+        setLoading(true);
         const success = await MockDB.rejectRequest(id, reason);
         if (success) {
           loadRequests();
         } else {
           window.alert('Ошибка при отклонении заявки');
+          setLoading(false);
         }
       }
     } else {
@@ -65,11 +83,13 @@ export default function AdminScreen() {
           text: 'Да, отменить',
           style: 'destructive',
           onPress: async () => {
+            setLoading(true);
             const success = await MockDB.rejectRequest(id, 'Заявка отклонена администратором');
             if (success) {
               loadRequests();
             } else {
               Alert.alert('Ошибка', 'Не удалось отклонить заявку');
+              setLoading(false);
             }
           },
         },
