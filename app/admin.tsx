@@ -97,6 +97,16 @@ export default function AdminScreen() {
     }
   };
 
+  const handleAddGold = async () => {
+    setLoading(true);
+    const newBal = await MockDB.addBalance(1000);
+    if (newBal > 0) {
+      if (Platform.OS === 'web') window.alert('Баланс пополнен на +1000 G!');
+      else Alert.alert('Успех', 'Баланс пополнен на +1000 G!');
+    }
+    setLoading(false);
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
@@ -106,8 +116,12 @@ export default function AdminScreen() {
         <Text style={styles.title}>Админ Панель</Text>
       </View>
 
+      <TouchableOpacity onPress={handleAddGold} style={styles.goldButton}>
+        <Text style={styles.goldButtonText}>✨ Добавить себе +1000 G</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={loadRequests} style={styles.refreshButton}>
-        <Text style={styles.refreshText}>{loading ? 'Загрузка...' : 'Обновить список'}</Text>
+        <Text style={styles.refreshText}>{loading ? 'Загрузка...' : 'Обновить список заявок'}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push('/admin/support')} style={styles.supportButton}>
@@ -169,6 +183,8 @@ const styles = StyleSheet.create({
   backButton: { marginRight: 15, padding: 5 },
   backButtonText: { fontSize: 18, color: '#007AFF' },
   title: { fontSize: 24, fontWeight: 'bold' },
+  goldButton: { backgroundColor: '#FFD700', padding: 15, borderRadius: 10, marginBottom: 15, alignItems: 'center' },
+  goldButtonText: { color: '#333', fontWeight: 'bold', fontSize: 16 },
   refreshButton: { backgroundColor: '#007AFF', padding: 10, borderRadius: 8, alignItems: 'center', marginBottom: 20 },
   refreshText: { color: 'white', fontWeight: 'bold' },
   emptyText: { textAlign: 'center', marginTop: 50, color: '#999' },
