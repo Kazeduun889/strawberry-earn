@@ -436,8 +436,21 @@ export const MockDB = {
   },
 
   sendAdminReply: async (userId: string, content: string) => {
-    const { error } = await supabase.from('support_messages').insert({ user_id: userId, content, is_admin_reply: true });
-    return !error;
+    try {
+      const { error } = await supabase.from('support_messages').insert({ 
+        user_id: userId, 
+        content, 
+        is_admin_reply: true 
+      });
+      if (error) {
+        console.error('sendAdminReply error:', error.message);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error('sendAdminReply exception:', e);
+      return false;
+    }
   },
 
   addBalance: async (amount: number): Promise<number> => {

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Image, Alert } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MockDB } from '../../services/mockDb';
@@ -27,15 +27,32 @@ export default function AdminChatScreen() {
   };
 
   const handleSend = async () => {
-    if (!reply.trim() || !userId) return;
+    console.log('handleSend triggered. UserId:', userId, 'Reply length:', reply.trim().length);
+    
+    if (!reply.trim()) return;
+    
+    if (!userId) {
+      if (Platform.OS === 'web') window.alert('Ошибка: ID пользователя не найден');
+      else Alert.alert('Ошибка', 'ID пользователя не найден');
+      return;
+    }
 
     setIsSending(true);
-    const success = await MockDB.sendAdminReply(userId, reply);
-    setIsSending(false);
-
-    if (success) {
-      setReply('');
-      loadMessages();
+    try {
+      const success = await MockDB.sendAdminReply(userId, reply.trim());
+      if (success) {
+        setReply('');
+        await loadMessages();
+      } else {
+        if (Platform.OS === 'web') window.alert('Ошибка при отправке ответа в БД');
+        else Alert.alert('Ошибка', 'Не удалось отправить ответ в БД');
+      }
+    } catch (e) {
+      console.error('handleSend exception:', e);
+      if (Platform.OS === 'web') window.alert('Критическая ошибка при отправке');
+      else Alert.alert('Ошибка', 'Критическая ошибка при отправке');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -112,9 +129,9 @@ const styles = StyleSheet.create({
   adminText: { color: 'white' },
   messageDate: { fontSize: 10, marginTop: 5, alignSelf: 'flex-end', color: '#ccc' },
   messageImage: { width: 200, height: 150, borderRadius: 10, marginBottom: 5 },
-  inputContainer: { flexDirection: 'row', padding: 10, backgroundColor: 'white', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#eee' },
-  input: { flex: 1, backgroundColor: '#f0f0f0', borderRadius: 20, paddingHorizontal: 15, paddingVertical: 8, maxHeight: 100, marginRight: 10 },
-  sendButton: { backgroundColor: '#34C759', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  inputContainer: { flexDirection: 'row', padding: 12, backgroundColor: 'white', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#eee', paddingBottom: Platform.OS === 'ios' ? 30 : 12 },
+  input: { flex: 1, backgroundColor: '#f0f0f0', borderRadius: 20, paddingHorizontal: 15, paddingVertical: 10, maxHeight: 100, marginRight: 10, fontSize: 16 },
+  sendButton: { backgroundColor: '#34C759', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } },
   disabledButton: { opacity: 0.5 },
   sendText: { color: 'white', fontSize: 20, fontWeight: 'bold' }
 });
