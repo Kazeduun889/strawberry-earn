@@ -39,13 +39,14 @@ export default function AdminChatScreen() {
 
     setIsSending(true);
     try {
-      const success = await MockDB.sendAdminReply(userId, reply.trim());
-      if (success) {
+      const result = await MockDB.sendAdminReply(userId, reply.trim());
+      if (result.success) {
         setReply('');
         await loadMessages();
       } else {
-        if (Platform.OS === 'web') window.alert('Ошибка при отправке ответа в БД');
-        else Alert.alert('Ошибка', 'Не удалось отправить ответ в БД');
+        const errorMsg = result.error || 'Неизвестная ошибка БД';
+        if (Platform.OS === 'web') window.alert(`Ошибка при отправке: ${errorMsg}`);
+        else Alert.alert('Ошибка', `Не удалось отправить ответ: ${errorMsg}`);
       }
     } catch (e) {
       console.error('handleSend exception:', e);
